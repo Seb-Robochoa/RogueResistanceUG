@@ -22,6 +22,12 @@ import org.openftc.easyopencv.OpenCvCameraFactory;
 import org.openftc.easyopencv.OpenCvCameraRotation;
 import org.openftc.easyopencv.OpenCvInternalCamera;
 import org.openftc.easyopencv.OpenCvPipeline;
+import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
+
+import com.qualcomm.hardware.bosch.BNO055IMU;
 
 import java.util.Timer;
 //import gayness
@@ -33,10 +39,16 @@ public class AutoMain extends LinearOpMode {
     private final double TPI = 33.5625;
     private int scenario;
     OpenCvInternalCamera phoneCam;
+    BNO055IMU imu;
     AutoMain.UltimateGoalDeterminationPipeline pipeline;
     private int distance;
     private int x;
     private int y;
+    Orientation angles;
+    private int currentAngle;
+    private String currentDirection;
+    Orientation ang;
+
 
     @Override
     public void runOpMode() throws InterruptedException  { //Load Zone B
@@ -209,6 +221,16 @@ public class AutoMain extends LinearOpMode {
         phoneCam.setPipeline(pipeline);
         claw.setPosition(1);
         flicker.setPosition(.7);
+        BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
+        parameters.angleUnit = BNO055IMU.AngleUnit.DEGREES;
+        parameters.accelUnit = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
+        parameters.calibrationDataFile = "BNO055IMUCalibration.json"; // see the calibration sample opmode
+        parameters.loggingEnabled = true;
+        parameters.loggingTag = "IMU";
+
+        imu = hardwareMap.get(BNO055IMU.class, "imu");
+        imu.initialize(parameters);
+        angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
         phoneCam.setViewportRenderingPolicy(OpenCvCamera.ViewportRenderingPolicy.OPTIMIZE_VIEW);
         phoneCam.openCameraDeviceAsync(() ->{
             phoneCam.startStreaming(320, 240, OpenCvCameraRotation.SIDEWAYS_LEFT);
@@ -337,6 +359,11 @@ public class AutoMain extends LinearOpMode {
         // transfer.setPower(0);
     }
 
+    public void powerShot(){
+        //Target position for shooting
+        int targetX = 0;
+        int targetY = 0;
+    }
     public void intake(double pow) throws InterruptedException
     {
         intake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
@@ -354,8 +381,8 @@ public class AutoMain extends LinearOpMode {
             transfer.setPower(1);
         }
         ElapsedTime succ = new ElapsedTime();
-        while(succ.milliseconds() < 3000)
-            heartbeat();
+        //while(succ.milliseconds() < 3000)
+        //  heartbeat();
         // intake.setPower(-1);
         //transfer.setPower(1);
         while(succ.milliseconds() < 8000 && leftFront.isBusy() && rightFront.isBusy() && leftBack.isBusy() && rightBack.isBusy())
@@ -366,7 +393,7 @@ public class AutoMain extends LinearOpMode {
 
     public void yeetRing(double pow) throws InterruptedException {
         shooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        shooter.setPower(pow);
+        shooter.setPower(pow-.05);
         ElapsedTime shooterTime = new ElapsedTime();
         int flick = 2000;
         while (shooterTime.milliseconds() <= 5000) {
@@ -374,7 +401,7 @@ public class AutoMain extends LinearOpMode {
             if(shooterTime.milliseconds() >= 2000) {
                 while (shooterTime.milliseconds() <= flick)
                     flicker.setPosition(0);
-                shooter.setPower(pow+.05);
+                shooter.setPower(pow);
             }
             flick = (int)shooterTime.milliseconds() + 500;
             while(shooterTime.milliseconds() <= flick)
@@ -418,6 +445,76 @@ public class AutoMain extends LinearOpMode {
         arm.setPower(0);
 
     }
+
+    public void turn(int degree, String dir)throws InterruptedException{
+        //left to pos
+        //right to neg
+        leftFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        leftBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rightFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rightBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+        leftFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        leftBack.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        rightFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        rightBack.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        int deg = 0;
+        if (dir.equals("right"))
+            deg = -degree;
+        else if (dir.equals("left"))
+            deg = degree;
+        telemetry.addData("desired angle", deg);
+        telemetry.update();
+        if (dir.equals("left")) {
+            while ((int)angles.firstAngle < deg) {
+
+                if ((int)angles.firstAngle < deg-30) {
+                    leftFront.setPower(.5);
+                    leftBack.setPower(.5);
+                    rightFront.setPower(-.5);
+                    rightBack.setPower(-.5);
+                }
+                else {
+                    leftFront.setPower(.05);
+                    leftBack.setPower(.05);
+                    rightFront.setPower(-.05);
+                    rightBack.setPower(-.05);
+                }
+
+                angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+                telemetry.addData("angle", angles.firstAngle);
+                telemetry.addData("angle", angles.secondAngle);
+                telemetry.addData("angle", angles.thirdAngle);
+                telemetry.update();
+                heartbeat();
+            }
+        }
+        else if (dir.equals("right")) {
+            while ((int)angles.firstAngle > deg) {
+                if ((int)angles.firstAngle > deg+30) {
+                    leftFront.setPower(-.5);
+                    leftBack.setPower(-.5);
+                    rightFront.setPower(.5);
+                    rightBack.setPower(.5);
+                }
+                else {
+                    leftFront.setPower(-.05);
+                    leftBack.setPower(-.05);
+                    rightFront.setPower(.05);
+                    rightBack.setPower(.05);
+                }
+
+                angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+                telemetry.addData("angle", angles.firstAngle);
+                telemetry.addData("angle", angles.secondAngle);
+                telemetry.addData("angle", angles.thirdAngle);
+                telemetry.update();
+                heartbeat();
+            }
+        }
+
+    }
+
 
 
 

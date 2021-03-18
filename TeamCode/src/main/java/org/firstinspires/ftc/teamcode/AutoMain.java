@@ -45,21 +45,55 @@ public class AutoMain extends LinearOpMode {
         moveBot(1,1,1,1,60, .6, true); //forward
         updateY(60);
         moveBot(1,2,2,1,20, .6, true); //strafe right
-        updateX(16);
+        updateX(20);
         moveBot(2, 1, 2, 1, -1, .6, true); //turn
-        yeetRing();
-        moveBot(1,2,2,1,4, .6, true); //strafe right
-        moveBot(2, 1, 2, 1, -1, .6, true); //turn
-        updateX(24);
         holder.setPosition(0);
-        moveBot(1,1,1,1,-12, .6, true); // backward
-        updateY(48);
-        intake();
-        moveBot(1,2,2,1,-4, .6, true); //strafe left
-        updateX(16);
-        moveBot(1,1,1,1,12, .6, true); // forward
-        updateY(60);
-        yeetRing();
+        yeetRing(-.73);
+
+        //------------
+
+        int deltaY = 43 - getY();
+        int deltaX = 18 - getX();
+
+        //coordinates for shooting
+        int targetX = getX();
+        int targetY = getY();
+
+        moveBot(2, 1, 2, 1, -1, .6, true); //turn
+
+        moveBot(1, 2, 2, 1, deltaX, .6, true); //right
+        moveBot(1, 1, 1, 1, deltaY, .6, true); //backward
+        updateY(deltaY);
+        // moveBot(1, 2, 2, 1, deltaX, .6, true); //right
+        updateX(deltaX);
+        intake(.1);
+
+        moveBot(1, 2, 2, 1, targetX-getX(), .6, true);
+        updateX(targetX-getX());
+        int save = targetX-getX();
+        yeetRing(-.73);
+
+
+        moveBot(1, 2, 2, 1, -(save), .6, true); //right
+        updateX(save);
+        intake(.17);
+        moveBot(1, 2, 2, 1, save, .6, true);
+        yeetRing(-.73);
+
+
+
+
+        //moveBot(1,2,2,1,4, .6, true); //strafe right
+        //updateX(24);
+
+        // holder.setPosition(0);
+        // moveBot(1,1,1,1,-12, .6, true); // backward
+        //updateY(48);
+        // intake();
+        //moveBot(1,2,2,1,-4, .6, true); //strafe left
+        //updateX(16);
+        // moveBot(1,1,1,1,12, .6, true); // forward
+        //updateY(60);
         updateTelemetry();
         if(scenario == 0) //zone A
         {
@@ -125,6 +159,10 @@ public class AutoMain extends LinearOpMode {
         //activate flicker
 
 
+
+    }
+
+    public void secondWobbler(){
 
     }
 
@@ -299,36 +337,50 @@ public class AutoMain extends LinearOpMode {
         // transfer.setPower(0);
     }
 
-    public void intake() throws InterruptedException
+    public void intake(double pow) throws InterruptedException
     {
         intake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         transfer.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        leftFront.setDirection(DcMotor.Direction.FORWARD);
+        leftBack.setDirection(DcMotor.Direction.FORWARD);
+        rightFront.setDirection(DcMotor.Direction.REVERSE);
+        rightBack.setDirection(DcMotor.Direction.REVERSE);
+        for(DcMotorEx motor : motors){
+            motor.setTargetPosition((int)(TPI*-6));
+            motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            motor.setPower(pow);
+            motor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            intake.setPower(-1);
+            transfer.setPower(1);
+        }
         ElapsedTime succ = new ElapsedTime();
         while(succ.milliseconds() < 3000)
             heartbeat();
-        intake.setPower(-1);
-        transfer.setPower(1);
-        while(succ.milliseconds() < 8000)
+        // intake.setPower(-1);
+        //transfer.setPower(1);
+        while(succ.milliseconds() < 8000 && leftFront.isBusy() && rightFront.isBusy() && leftBack.isBusy() && rightBack.isBusy())
             heartbeat();
         intake.setPower(0);
         transfer.setPower(0);
     }
 
-    public void yeetRing() throws InterruptedException {
+    public void yeetRing(double pow) throws InterruptedException {
         shooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        shooter.setPower(-.78);
+        shooter.setPower(pow);
         ElapsedTime shooterTime = new ElapsedTime();
         int flick = 2000;
         while (shooterTime.milliseconds() <= 5000) {
             flick = (int)shooterTime.milliseconds() + flick;
-            if(shooterTime.milliseconds() >= 2000)
+            if(shooterTime.milliseconds() >= 2000) {
                 while (shooterTime.milliseconds() <= flick)
                     flicker.setPosition(0);
-            flick = (int)shooterTime.milliseconds() + 350;
+                shooter.setPower(pow+.05);
+            }
+            flick = (int)shooterTime.milliseconds() + 500;
             while(shooterTime.milliseconds() <= flick)
                 flicker.setPosition(.7);
-            flick = 350;
-            shooter.setPower(-.73);
+            flick = 500;
+
         }
         flicker.setPosition(.7);
         intake.setPower(0);

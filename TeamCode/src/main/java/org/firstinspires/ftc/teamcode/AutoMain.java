@@ -11,6 +11,8 @@ import com.qualcomm.robotcore.util.Range;
 
 //import org.firstinspires.ftc.teamcode.Camera;
 
+import org.firstinspires.ftc.robotcore.external.function.InterruptableThrowingRunnable;
+import org.firstinspires.ftc.robotcore.external.function.InterruptableThrowingSupplier;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
@@ -33,6 +35,16 @@ import java.util.Timer;
 //import gayness
 @Autonomous
 public class AutoMain extends LinearOpMode {
+    private final int[] RIGHT = {1, 2, 2, 1},
+            LEFT = {2, 1, 1, 2},
+            FORWARD = {1, 1, 1, 1},
+            BACKWARD = {2, 2, 2, 2},
+            FOWARDRIGHT = {1, 0, 0, 1},
+            FORWARDLEFT = {0, 1, 1, 0},
+            BACKWARDRIGHT = {0, 2, 2, 0},
+            BACKWARDLEFT = {2, 0, 0, 2},
+            TURNRIGHT = {1, 2, 1, 2},
+            TURNLEFT = {2, 1, 2, 1};
     private DcMotorEx leftFront, rightFront, leftBack, rightBack, arm, transfer, intake, shooter;
     private Servo claw, flicker, holder;
     private DcMotorEx[] motors;
@@ -51,14 +63,18 @@ public class AutoMain extends LinearOpMode {
 
 
     @Override
-    public void runOpMode() throws InterruptedException  { //Load Zone B
+    public void runOpMode() throws InterruptedException { //Load Zone B
         initialize();
+        powerShot();
 
-        moveBot(1,1,1,1,60, .6, true); //forward
+
+
+
+        /*moveBot(FORWARD,60, .6, true); //forward
         updateY(60);
-        moveBot(1,2,2,1,20, .6, true); //strafe right
+        moveBot(RIGHT,20, .6, true); //strafe right
         updateX(20);
-        moveBot(2, 1, 2, 1, -1, .6, true); //turn
+        moveBot(TURNRIGHT, 1, .6, true); //turn
         holder.setPosition(0);
         yeetRing(-.73);
 
@@ -71,25 +87,25 @@ public class AutoMain extends LinearOpMode {
         int targetX = getX();
         int targetY = getY();
 
-        moveBot(2, 1, 2, 1, -1, .6, true); //turn
+        moveBot(TURNRIGHT, 1, .6, true); //turn
 
-        moveBot(1, 2, 2, 1, deltaX, .6, true); //right
-        moveBot(1, 1, 1, 1, deltaY, .6, true); //backward
+        moveBot(RIGHT, deltaX, .6, true); //right
+        moveBot(BACKWARD, deltaY, .6, true); //backward
         updateY(deltaY);
         // moveBot(1, 2, 2, 1, deltaX, .6, true); //right
         updateX(deltaX);
         intake(.1);
 
-        moveBot(1, 2, 2, 1, targetX-getX(), .6, true);
+        moveBot(RIGHT, targetX-getX(), .6, true);
         updateX(targetX-getX());
         int save = targetX-getX();
         yeetRing(-.73);
 
 
-        moveBot(1, 2, 2, 1, -(save), .6, true); //right
+        moveBot(LEFT, save, .6, true); //right
         updateX(save);
         intake(.17);
-        moveBot(1, 2, 2, 1, save, .6, true);
+        moveBot(RIGHT, save, .6, true);
         yeetRing(-.73);
 
 
@@ -109,30 +125,30 @@ public class AutoMain extends LinearOpMode {
         updateTelemetry();
         if(scenario == 0) //zone A
         {
-            moveBot(1, 1, 1, 1, 15, .6, true); //forward
+            moveBot(FORWARD, 15, .6, true); //forward
             updateY(15);
 
-            moveBot(2, 1, 2, 1, -16, .6, true); //turn
+            moveBot(TURNRIGHT, 16, .6, true); //turn
             //x += -16;
             armTravel();
             updateTelemetry();
         }
         if(scenario == 1) { //zone B
-            moveBot(1, 1, 1, 1, 18, .6, true); //forward0
+            moveBot(FORWARD, 18, .6, true); //forward
             updateY(18);
-            moveBot(1,2,2,1,18, .6, true); //strafe right
+            moveBot(RIGHT,18, .6, true); //strafe right
             updateX(18);
             armTravel();
             updateTelemetry();
         }
         if(scenario == 4){ //zone C
-            moveBot(1,2,2,1,-11, .6, true); //strafe left
+            moveBot(LEFT,11, .6, true); //strafe left
             updateX(-11);
-            moveBot(1,2,1,2,1,.6,true);
-            moveBot(1, 1, 1, 1, 48, .6, true); //forward
+            moveBot(TURNRIGHT,1,.6,true);
+            moveBot(FORWARD, 48, .6, true); //forward
             updateY(48);
             armTravel();
-            moveBot(1, 1, 1, 1, -36, .6, true); //backward
+            moveBot(BACKWARD, 36, .6, true); //backward
             updateY(-36);
             updateTelemetry();
         }
@@ -171,32 +187,31 @@ public class AutoMain extends LinearOpMode {
         //activate flicker
 
 
+    }
+
+    public void secondWobbler() {
 
     }
 
-    public void secondWobbler(){
-
-    }
-
-    public void updateTelemetry(){
+    public void updateTelemetry() {
         telemetry.addData("X", getX());
         telemetry.addData("Y", getY());
         telemetry.update();
     }
 
-    public void updateX(int pos){
+    public void updateX(int pos) {
         x += pos;
     }
 
-    public void updateY(int pos){
+    public void updateY(int pos) {
         y += pos;
     }
 
-    public int getX(){
+    public int getX() {
         return x;
     }
 
-    public int getY(){
+    public int getY() {
         return y;
     }
 
@@ -232,24 +247,24 @@ public class AutoMain extends LinearOpMode {
         imu.initialize(parameters);
         angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
         phoneCam.setViewportRenderingPolicy(OpenCvCamera.ViewportRenderingPolicy.OPTIMIZE_VIEW);
-        phoneCam.openCameraDeviceAsync(() ->{
+        phoneCam.openCameraDeviceAsync(() -> {
             phoneCam.startStreaming(320, 240, OpenCvCameraRotation.SIDEWAYS_LEFT);
         });
-        while(!opModeIsActive()){
+        while (!opModeIsActive()) {
             telemetry.addData("Analysis", pipeline.getAnalysis());
             telemetry.addData("Position", pipeline.position);
             updateTelemetry();
             telemetry.update();
             scenario = 1;
-            if(pipeline.getPosition() == UltimateGoalDeterminationPipeline.RingPosition.NONE) //zone A
+            if (pipeline.getPosition() == UltimateGoalDeterminationPipeline.RingPosition.NONE) //zone A
             {
                 scenario = 0;
             }
-            if(pipeline.getPosition() == UltimateGoalDeterminationPipeline.RingPosition.ONE) //zone A
+            if (pipeline.getPosition() == UltimateGoalDeterminationPipeline.RingPosition.ONE) //zone A
             {
                 scenario = 1;
             }
-            if(pipeline.getPosition() == UltimateGoalDeterminationPipeline.RingPosition.FOUR) //zone A
+            if (pipeline.getPosition() == UltimateGoalDeterminationPipeline.RingPosition.FOUR) //zone A
             {
                 scenario = 4;
             }
@@ -268,6 +283,7 @@ public class AutoMain extends LinearOpMode {
         waitForStart();
     }
 //from retard import idiot
+
     /**
      * @param power
      * @param distance inchies so you will have to convert to tics
@@ -279,26 +295,26 @@ public class AutoMain extends LinearOpMode {
     //It also accepts power and distance
 
     //withIntake will be used later (work in progress)
-    public void betterMoveBot(double angleRadians, double power, int distance, double turnAmount, boolean withIntake) throws InterruptedException{ //turnAmount is + or - depending on right or left, in range -1 to 1
+    public void betterMoveBot(double angleRadians, double power, int distance, double turnAmount, boolean withIntake) throws InterruptedException { //turnAmount is + or - depending on right or left, in range -1 to 1
         //testing needed for how much distance = 90 degrees
         //estimated total x + total y movement distance needed in distance variable for angled slides (needs testing)
         double powerAngle = angleRadians - (Math.PI / 4); // conversion for correct power values
         double[] motorPowers = new double[4];//left front, left back, right front, right back
-        motorPowers[0] = Range.clip(0.5 * Math.cos(powerAngle)- turnAmount, -1.0, 1.0);
+        motorPowers[0] = Range.clip(0.5 * Math.cos(powerAngle) - turnAmount, -1.0, 1.0);
         motorPowers[1] = Range.clip(0.5 * Math.sin(powerAngle) - turnAmount, -1.0, 1.0);
         motorPowers[2] = Range.clip(0.5 * Math.sin(powerAngle) + turnAmount, -1.0, 1.0);
-        motorPowers[3] = Range.clip(0.5 * Math.cos(powerAngle) +turnAmount, -1.0, 1.0);
+        motorPowers[3] = Range.clip(0.5 * Math.cos(powerAngle) + turnAmount, -1.0, 1.0);
 
         leftFront.setDirection(DcMotor.Direction.FORWARD);
         leftBack.setDirection(DcMotor.Direction.FORWARD);
         rightFront.setDirection(DcMotor.Direction.REVERSE);
         rightBack.setDirection(DcMotor.Direction.REVERSE);
 
-        int travel = (int)(distance * TPI);
-        for (int i = 0;i<4;i++) {
+        int travel = (int) (distance * TPI);
+        for (int i = 0; i < 4; i++) {
             motors[i].setTargetPosition(travel);
             motors[i].setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-            motors[i].setPower(motorPowers[i]*(power/2));
+            motors[i].setPower(motorPowers[i] * (power / 2));
             motors[i].setMode(DcMotor.RunMode.RUN_TO_POSITION);
         }
 
@@ -306,32 +322,37 @@ public class AutoMain extends LinearOpMode {
             heartbeat();
         }
     }
-    public void moveBot(int leftT, int rightT, int leftB, int rightB, int distance, double power, boolean withIntake) throws InterruptedException{
+
+    public void moveBot(int[] dir, int distance, double power, boolean withIntake) throws InterruptedException {
         //moveBot(1, 1, 2, 2, -24, .60, true); //Forwward
         //turnBot(2, 2, 1, 1, -24, .60); //Backward
         //turnBot(2, 1, 2, 1, 30, .60); //Strafe right
         //turnBot(1, 2, 1, 2, 0, .6) /Strafe left
+        int leftT = dir[0];
+        int rightT = dir[1];
+        int leftB = dir[2];
+        int rightB = dir[3]; // MAKE CASE FOR 0
         if (leftT == 1) {
             leftFront.setDirection(DcMotor.Direction.FORWARD);
-        } else if(leftT == 2){
+        } else if (leftT == 2) {
             leftFront.setDirection(DcMotor.Direction.REVERSE);
         }
 
         if (leftB == 1) {
             leftBack.setDirection(DcMotor.Direction.FORWARD);
-        } else if(leftB == 2){
+        } else if (leftB == 2) {
             leftBack.setDirection(DcMotor.Direction.REVERSE);
         }
 
         if (rightT == 2) {
             rightFront.setDirection(DcMotor.Direction.FORWARD);
-        } else if(rightT == 1){
+        } else if (rightT == 1) {
             rightFront.setDirection(DcMotor.Direction.REVERSE);
         }
 
         if (rightB == 2) {
             rightBack.setDirection(DcMotor.Direction.FORWARD);
-        } else if(rightT == 1){
+        } else if (rightT == 1) {
             rightBack.setDirection(DcMotor.Direction.REVERSE);
         }
 
@@ -344,7 +365,7 @@ public class AutoMain extends LinearOpMode {
         }*/
 
         //Moves the robot
-        int travel = (int)(distance * TPI);
+        int travel = (int) (distance * TPI);
         for (DcMotorEx motor : motors) {
             motor.setTargetPosition(travel);
             motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -359,21 +380,36 @@ public class AutoMain extends LinearOpMode {
         // transfer.setPower(0);
     }
 
-    public void powerShot(){
+    public void powerShot() throws InterruptedException {
+        double pow = -.69;
+        shooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        shooter.setPower(pow);
         //Target position for shooting
         int targetX = 0;
         int targetY = 0;
+        double initialDistance = 62;
+        double powerIncrement = 0.04;
+        ElapsedTime wait = new ElapsedTime();
+
+        while (wait.milliseconds() <= 1000) {
+        }
+        yeetLessRing(pow);
+        turn(Math.toDegrees(Math.atan2(7.5, initialDistance)));
+        yeetLessRing(pow-powerIncrement);
+        turn(Math.toDegrees(Math.atan2(15,initialDistance))-Math.toDegrees(Math.atan2(7.5,initialDistance)));
+        yeetLessRing(pow-(2*powerIncrement));
+        shooter.setPower(0);
     }
-    public void intake(double pow) throws InterruptedException
-    {
+
+    public void intake(double pow) throws InterruptedException {
         intake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         transfer.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         leftFront.setDirection(DcMotor.Direction.FORWARD);
         leftBack.setDirection(DcMotor.Direction.FORWARD);
         rightFront.setDirection(DcMotor.Direction.REVERSE);
         rightBack.setDirection(DcMotor.Direction.REVERSE);
-        for(DcMotorEx motor : motors){
-            motor.setTargetPosition((int)(TPI*-6));
+        for (DcMotorEx motor : motors) {
+            motor.setTargetPosition((int) (TPI * -6));
             motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
             motor.setPower(pow);
             motor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
@@ -385,7 +421,7 @@ public class AutoMain extends LinearOpMode {
         //  heartbeat();
         // intake.setPower(-1);
         //transfer.setPower(1);
-        while(succ.milliseconds() < 8000 && leftFront.isBusy() && rightFront.isBusy() && leftBack.isBusy() && rightBack.isBusy())
+        while (succ.milliseconds() < 8000 && leftFront.isBusy() && rightFront.isBusy() && leftBack.isBusy() && rightBack.isBusy())
             heartbeat();
         intake.setPower(0);
         transfer.setPower(0);
@@ -393,18 +429,18 @@ public class AutoMain extends LinearOpMode {
 
     public void yeetRing(double pow) throws InterruptedException {
         shooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        shooter.setPower(pow-.05);
+        shooter.setPower(pow - .05);
         ElapsedTime shooterTime = new ElapsedTime();
         int flick = 2000;
         while (shooterTime.milliseconds() <= 5000) {
-            flick = (int)shooterTime.milliseconds() + flick;
-            if(shooterTime.milliseconds() >= 2000) {
+            flick = (int) shooterTime.milliseconds() + flick;
+            if (shooterTime.milliseconds() >= 2000) {
                 while (shooterTime.milliseconds() <= flick)
                     flicker.setPosition(0);
                 shooter.setPower(pow);
             }
-            flick = (int)shooterTime.milliseconds() + 500;
-            while(shooterTime.milliseconds() <= flick)
+            flick = (int) shooterTime.milliseconds() + 500;
+            while (shooterTime.milliseconds() <= flick)
                 flicker.setPosition(.7);
             flick = 500;
 
@@ -414,6 +450,17 @@ public class AutoMain extends LinearOpMode {
         transfer.setPower(0);
         shooter.setPower(0);
     }
+
+    public void yeetLessRing(double pow) throws InterruptedException {
+        shooter.setPower(pow);
+        ElapsedTime shooterTime = new ElapsedTime();
+        while (shooterTime.milliseconds() <= 500) {
+            if (shooterTime.milliseconds() <= 250) flicker.setPosition(0);
+            else flicker.setPosition(.7);
+        }
+        while (shooterTime.milliseconds() <= 1000) {
+        }
+    }
 //julian said make a variable called balls someone please do that
 
     public void heartbeat() throws InterruptedException {
@@ -422,16 +469,16 @@ public class AutoMain extends LinearOpMode {
             throw new InterruptedException();
         }
     }
+
     public void armTravel() throws InterruptedException {
         ElapsedTime wobbler = new ElapsedTime();
         arm.setTargetPosition(-2268);
         arm.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         arm.setPower(-1);
         arm.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        while(wobbler.milliseconds() <= 3000){
+        while (wobbler.milliseconds() <= 3000) {
             heartbeat();
-            if(!arm.isBusy())
-            {
+            if (!arm.isBusy()) {
                 claw.setPosition(0);
             }
         }
@@ -439,11 +486,59 @@ public class AutoMain extends LinearOpMode {
         arm.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         arm.setPower(-1);
         arm.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        while(arm.isBusy()){
+        while (arm.isBusy()) {
             heartbeat();
         }
         arm.setPower(0);
 
+    }
+
+    public void turn(double turnAmount) throws InterruptedException {//right is positive sdlijhfkjdhfjklashdflkasdhjklfahsdjklfhasjkldfhlasjdkhfjkasfdhlk
+        leftFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        leftBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rightFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rightBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+        leftFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        leftBack.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        rightFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        rightBack.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+        double initialAngle = angles.firstAngle;
+        double desiredAngle = initialAngle+turnAmount;
+        int turnFactor = (int) (turnAmount/Math.abs(turnAmount));// (turnAmount/Math.abs(turnAmount) determines if right or left. if left this value will be -1 and swap power values
+        double initialPower = Math.abs(Math.abs(angles.firstAngle-initialAngle)-Math.abs(turnAmount))>30?.5:.5/(30/Math.abs(Math.abs(angles.firstAngle-initialAngle)-Math.abs(turnAmount)));//.5/(30/x) x is how close to desired angle
+        telemetry.addData("current angle", angles.firstAngle);
+        telemetry.addData("initial angle", initialAngle);
+        telemetry.addData("desired angle", desiredAngle);
+        telemetry.addData("angle difference", Math.abs(Math.abs(angles.firstAngle-initialAngle)-Math.abs(turnAmount)));
+        telemetry.addData("initial power", initialPower);
+        telemetry.update();
+        leftFront.setPower(initialPower*turnFactor);
+        rightFront.setPower(-initialPower*turnFactor);
+        leftBack.setPower(initialPower*turnFactor);
+        rightBack.setPower(-initialPower*turnFactor);
+        while(Math.abs(Math.abs(angles.firstAngle-initialAngle)-Math.abs(turnAmount))>5){ // (angles.firstAngle-initialAngle-Math.abs(turnAmount)) is the difference between current angle and desired. Closer to desired angle = lower value.
+            angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+            if(Math.abs(Math.abs(angles.firstAngle-initialAngle)-Math.abs(turnAmount))<30){
+                leftFront.setPower(.5/(30/Math.abs(Math.abs(angles.firstAngle-initialAngle)-Math.abs(turnAmount)))*turnFactor);
+                rightFront.setPower(-.5/(30/Math.abs(Math.abs(angles.firstAngle-initialAngle)-Math.abs(turnAmount)))*turnFactor);
+                leftBack.setPower(.5/(30/Math.abs(Math.abs(angles.firstAngle-initialAngle)-Math.abs(turnAmount)))*turnFactor);
+                rightBack.setPower(-.5/(30/Math.abs(Math.abs(angles.firstAngle-initialAngle)-Math.abs(turnAmount)))*turnFactor);
+            }
+            telemetry.update();
+            heartbeat();
+        }
+        leftFront.setPower(0);
+        rightFront.setPower(0);
+        leftBack.setPower(0);
+        rightBack.setPower(0);
+        ElapsedTime wait = new ElapsedTime();
+        while(wait.milliseconds()<1000){
+            angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+            telemetry.update();
+            heartbeat();
+        }
     }
 
     public void turn(int degree, String dir)throws InterruptedException{
@@ -463,6 +558,7 @@ public class AutoMain extends LinearOpMode {
             deg = -degree;
         else if (dir.equals("left"))
             deg = degree;
+        telemetry.addData("current angle", angles.firstAngle);
         telemetry.addData("desired angle", deg);
         telemetry.update();
         if (dir.equals("left")) {

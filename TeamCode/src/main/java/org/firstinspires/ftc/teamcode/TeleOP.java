@@ -11,6 +11,12 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
+
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
+import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
+
 //test lol Test
 //for jon in jon on jon
 @TeleOp
@@ -41,6 +47,7 @@ public class TeleOP extends OpMode {
     boolean servoMoving = false;
     boolean armmove = false;
     final static double dropWobbleTime = 1000;
+    Orientation angles;
 
 
     //double initialAngle = currentAngle();
@@ -89,12 +96,14 @@ public class TeleOP extends OpMode {
         imu.initialize(parameters);
         runtime = new ElapsedTime();
         reverse = false;
+
+        angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
     }
 
 
     @Override
     public void loop() {
-        //if(!leftFront.isBusy()&&!leftBack.isBusy()&&!rightFront.isBusy()&&!rightBack.isBusy()) {
+
         //Increasing the power gradually
         //int power = (DcMotorSimple) arm.getPower();
 
@@ -104,34 +113,33 @@ public class TeleOP extends OpMode {
 
         //sets the factor multiplied to the power of the motors
         factor = togglePrecision ? .3 : 1; //the power is 1/5th of its normal value while in precision mode
-
-        // Do not mess with this, if it works, it works
-        double x = Math.hypot(gamepad1.left_stick_x, gamepad1.left_stick_y);
-        double stickAngle = Math.atan2(direction ? -gamepad1.left_stick_y : gamepad1.left_stick_y, direction ? gamepad1.left_stick_x : -gamepad1.left_stick_x); // desired robot angle from the angle of stick
-        double powerAngle = stickAngle - (Math.PI / 4); // conversion for correct power values
-        double rightX = gamepad1.right_stick_x; // right stick x axis controls turning
-        final double leftFrontPower = Range.clip(x * Math.cos(powerAngle) + rightX, -1.0, 1.0);
-        final double leftRearPower = Range.clip(x * Math.sin(powerAngle) + rightX, -1.0, 1.0);
-        final double rightFrontPower = Range.clip(x * Math.sin(powerAngle) - rightX, -1.0, 1.0);
-        final double rightRearPower = Range.clip(x * Math.cos(powerAngle) - rightX, -1.0, 1.0);
-
-        telemetry.addData("Power shot mode:", getShotMode());
-        telemetry.addData("One driver: ", getDrive());
-        //Set the position of arm to counter clockwise/clockwise
+        if(!leftFront.isBusy()&&!leftBack.isBusy()&&!rightFront.isBusy()&&!rightBack.isBusy()) {
+            // Do not mess with this, if it works, it works
+            double x = Math.hypot(gamepad1.left_stick_x, gamepad1.left_stick_y);
+            double stickAngle = Math.atan2(direction ? -gamepad1.left_stick_y : gamepad1.left_stick_y, direction ? gamepad1.left_stick_x : -gamepad1.left_stick_x); // desired robot angle from the angle of stick
+            double powerAngle = stickAngle - (Math.PI / 4); // conversion for correct power values
+            double rightX = gamepad1.right_stick_x; // right stick x axis controls turning
+            final double leftFrontPower = Range.clip(x * Math.cos(powerAngle) + rightX, -1.0, 1.0);
+            final double leftRearPower = Range.clip(x * Math.sin(powerAngle) + rightX, -1.0, 1.0);
+            final double rightFrontPower = Range.clip(x * Math.sin(powerAngle) - rightX, -1.0, 1.0);
+            final double rightRearPower = Range.clip(x * Math.cos(powerAngle) - rightX, -1.0, 1.0);
 
 
-        //neutral is .5, right trigger .5 to 1, left trigger is 0 to .5 What???
+            //Set the position of arm to counter clockwise/clockwise
 
 
-        leftFront.setDirection(DcMotor.Direction.REVERSE);
-        leftBack.setDirection(DcMotor.Direction.REVERSE);
-        rightFront.setDirection(DcMotor.Direction.FORWARD);
-        rightBack.setDirection(DcMotor.Direction.FORWARD);
-        leftFront.setPower(leftFrontPower * factor);
-        leftBack.setPower(leftRearPower * factor);
-        rightFront.setPower(rightFrontPower * factor);
-        rightBack.setPower(rightRearPower * factor);
+            //neutral is .5, right trigger .5 to 1, left trigger is 0 to .5 What???
 
+
+            leftFront.setDirection(DcMotor.Direction.REVERSE);
+            leftBack.setDirection(DcMotor.Direction.REVERSE);
+            rightFront.setDirection(DcMotor.Direction.FORWARD);
+            rightBack.setDirection(DcMotor.Direction.FORWARD);
+            leftFront.setPower(leftFrontPower * factor);
+            leftBack.setPower(leftRearPower * factor);
+            rightFront.setPower(rightFrontPower * factor);
+            rightBack.setPower(rightRearPower * factor);
+        }
         //Incrementing the power by 0.0 EVERY TIME you call this function
         //Incrementing the power by 0.0 EVERY TIME you call this function
         // for jon in jon on jon
@@ -141,6 +149,8 @@ public class TeleOP extends OpMode {
      shooter.setPower(power);
      intake.setPower(power);
      transfer.setPower(power); */
+
+
 
         //Reset the intake and transfer encoders
         precisionMode(); //check for precision mode
@@ -152,7 +162,13 @@ public class TeleOP extends OpMode {
         flickRing(); // toggles flicker
         toggleHolder(); // toggles intake clip
         armTravel2(); // second player arm function
+        snapBot();
 
+        telemetry.addData("Power shot mode:", getShotMode());
+        telemetry.addData("One driver: ", getDrive());
+        telemetry.addData("RB",gamepad1.right_bumper);
+        telemetry.addData("angle",angles.firstAngle);
+        telemetry.update();
 
         //}
     }
@@ -274,32 +290,31 @@ public class TeleOP extends OpMode {
         }
     }
 
-// public void snapBot(){
-// if(gamepad1.back){
-// while(Math.abs(currentAngle()-initialAngle)>=5){
-// if(currentAngle()-initialAngle>0){
-// leftFront.setDirection(DcMotor.Direction.FORWARD);
-// leftBack.setDirection(DcMotor.Direction.FORWARD);
-// rightFront.setDirection(DcMotor.Direction.FORWARD);
-// rightBack.setDirection(DcMotor.Direction.FORWARD);
-// leftFront.setPower(.1);
-// leftBack.setPower(.1);
-// rightFront.setPower(.1);
-// rightBack.setPower(.1);
-// }
-// else{
-// leftFront.setDirection(DcMotor.Direction.REVERSE);
-// leftBack.setDirection(DcMotor.Direction.REVERSE);
-// rightFront.setDirection(DcMotor.Direction.REVERSE);
-// rightBack.setDirection(DcMotor.Direction.REVERSE);
-// leftFront.setPower(.1);
-// leftBack.setPower(.1);
-// rightFront.setPower(.1);
-// rightBack.setPower(.1);
-// }
-// }
-// }
-// }
+    public void snapBot() {
+        if(gamepad1.right_bumper){
+            double turnAmount=-angles.firstAngle;
+
+            leftFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            leftBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            rightFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            rightBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+            leftFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            leftBack.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            rightFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            rightBack.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+
+            leftFront.setPower(0);
+            rightFront.setPower(0);
+            leftBack.setPower(0);
+            rightBack.setPower(0);
+
+            leftFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            leftBack.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            rightFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            rightBack.setMode(DcMotor.RunMode.RUN_USING_ENCODER);        }
+    }
 
 
     public void toggleHolder() {// not really useful, just to make it possible to toggle the holder if needed. KINDA WORKS
@@ -421,19 +436,20 @@ public class TeleOP extends OpMode {
         return false;
     }
 
-    public boolean checkRB()
-    {
 
-        if (currentRB) previousRB = true;
-        else previousRB = false;
-        currentRB = gamepad1.right_bumper;
-
-
-        if(currentRB && !previousRB){
-            return true;
-        }
-        return false;
-    }
+//    public boolean checkRB()
+//    {
+//
+//        if (currentRB) previousRB = true;
+//        else previousRB = false;
+//        currentRB = gamepad1.right_bumper;
+//
+//
+//        if(currentRB && !previousRB){
+//            return true;
+//        }
+//        return false;
+//    }
 //    public void powerShots(){ //needs testing
 //        if(gamepad1.start){
 //            //use bettermovebot if possible. WIP

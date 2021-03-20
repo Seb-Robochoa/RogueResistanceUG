@@ -57,7 +57,7 @@ public class AutoMain extends LinearOpMode {
     private int x;
     private int y;
     Orientation angles;
-    private int currentAngle;
+    private double initialAngle;
     private String currentDirection;
     Orientation ang;
 
@@ -65,47 +65,58 @@ public class AutoMain extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException { //Load Zone B
         initialize();
-        powerShot();
+        //powerShot();
 
 
 
-
-        /*moveBot(FORWARD,60, .6, true); //forward
+       /* moveBot(FORWARD,60, .75, true); //forward
+        pause();
         updateY(60);
-        moveBot(RIGHT,20, .6, true); //strafe right
+        moveBot(RIGHT,24, .75, true); //strafe right
+        pause();
         updateX(20);
-        moveBot(TURNRIGHT, 1, .6, true); //turn
+        moveBot(TURNRIGHT, 1, .75, true); //turn
+        pause();
         holder.setPosition(0);
+       // snapBot();
         yeetRing(-.73);
-
+        //secondWobbler();
         //------------
 
-        int deltaY = 43 - getY();
+        /*int deltaY = getY() - 43;
         int deltaX = 18 - getX();
 
         //coordinates for shooting
         int targetX = getX();
         int targetY = getY();
 
-        moveBot(TURNRIGHT, 1, .6, true); //turn
+        moveBot(TURNRIGHT, 1, .75, true); //turn
+        pause();
 
-        moveBot(RIGHT, deltaX, .6, true); //right
-        moveBot(BACKWARD, deltaY, .6, true); //backward
+        moveBot(RIGHT, deltaX, .75, true); //right
+        pause();
+        moveBot(BACKWARD, deltaY, .5, true); //backward
+        pause();
         updateY(deltaY);
         // moveBot(1, 2, 2, 1, deltaX, .6, true); //right
         updateX(deltaX);
         intake(.1);
 
-        moveBot(RIGHT, targetX-getX(), .6, true);
+        moveBot(RIGHT, targetX-getX(), .75, true);
+        pause();
         updateX(targetX-getX());
         int save = targetX-getX();
+        //snapBot();
         yeetRing(-.73);
 
 
-        moveBot(LEFT, save, .6, true); //right
+        moveBot(LEFT, -save, .75, true); //right
+        pause();
         updateX(save);
-        intake(.17);
-        moveBot(RIGHT, save, .6, true);
+        intake(.2);
+        moveBot(RIGHT, save, .75, true);
+        pause();
+        //snapBot();
         yeetRing(-.73);
 
 
@@ -123,7 +134,7 @@ public class AutoMain extends LinearOpMode {
         // moveBot(1,1,1,1,12, .6, true); // forward
         //updateY(60);
         updateTelemetry();
-        if(scenario == 0) //zone A
+        /*if(scenario == 0) //zone A
         {
             moveBot(FORWARD, 15, .6, true); //forward
             updateY(15);
@@ -170,7 +181,10 @@ public class AutoMain extends LinearOpMode {
         */
 
         claw.setPosition(1);
-
+        turn(180);
+        turn(90);
+        turn(-90);
+        turn(-180);
 
         //0 Void 1 Forward 2 Reverse
         //moveBot(1,1,2,3,18, .6, true);'
@@ -189,9 +203,30 @@ public class AutoMain extends LinearOpMode {
 
     }
 
-    public void secondWobbler() {
+    public void secondWobbler() throws InterruptedException {
+        // position of the second wobbler is at 24, 5
+        int deltaX = getX();
+        int deltaY = getY() - 5;
+        turn(180);
+        moveBot(FORWARD, deltaY-7, .4, true);
+
+        ElapsedTime wobbler = new ElapsedTime();
+        arm.setTargetPosition(-2268);
+        arm.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        arm.setPower(-1);
+        arm.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        while (wobbler.milliseconds() <= 3000) {
+            heartbeat();
+            if (!arm.isBusy()) {
+                claw.setPosition(0);
+            }
+        }
+        claw.setPosition(1);
+        arm.setTargetPosition(2268);
 
     }
+
+
 
     public void updateTelemetry() {
         telemetry.addData("X", getX());
@@ -246,6 +281,7 @@ public class AutoMain extends LinearOpMode {
         imu = hardwareMap.get(BNO055IMU.class, "imu");
         imu.initialize(parameters);
         angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+        initialAngle = angles.firstAngle;
         phoneCam.setViewportRenderingPolicy(OpenCvCamera.ViewportRenderingPolicy.OPTIMIZE_VIEW);
         phoneCam.openCameraDeviceAsync(() -> {
             phoneCam.startStreaming(320, 240, OpenCvCameraRotation.SIDEWAYS_LEFT);
@@ -284,9 +320,13 @@ public class AutoMain extends LinearOpMode {
     }
 //from retard import idiot
 
+    public void snapBot() throws InterruptedException{
+        angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+        turn(initialAngle-angles.firstAngle);
+    }
     /**
      * @param power
-     * @param distance inchies so you will have to convert to tics
+     * @param distance inches so you will have to convert to tics
      */
 
     //This method accepts 6 variables:
@@ -385,9 +425,9 @@ public class AutoMain extends LinearOpMode {
         shooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         shooter.setPower(pow);
         //Target position for shooting
-        int targetX = 0;
-        int targetY = 0;
-        double initialDistance = 62;
+        double targetX = 26.5;
+        double targetY = 50.5;
+        double initialDistance = 60;
         double powerIncrement = 0.04;
         ElapsedTime wait = new ElapsedTime();
 
@@ -399,6 +439,11 @@ public class AutoMain extends LinearOpMode {
         turn(Math.toDegrees(Math.atan2(15,initialDistance))-Math.toDegrees(Math.atan2(7.5,initialDistance)));
         yeetLessRing(pow-(2*powerIncrement));
         shooter.setPower(0);
+    }
+
+    public void pause(){
+        ElapsedTime bruh = new ElapsedTime();
+        while(bruh.milliseconds()<100){};
     }
 
     public void intake(double pow) throws InterruptedException {
@@ -421,7 +466,7 @@ public class AutoMain extends LinearOpMode {
         //  heartbeat();
         // intake.setPower(-1);
         //transfer.setPower(1);
-        while (succ.milliseconds() < 8000 && leftFront.isBusy() && rightFront.isBusy() && leftBack.isBusy() && rightBack.isBusy())
+        while (succ.milliseconds() < 5000)
             heartbeat();
         intake.setPower(0);
         transfer.setPower(0);
@@ -507,25 +552,33 @@ public class AutoMain extends LinearOpMode {
         double initialAngle = angles.firstAngle;
         double desiredAngle = initialAngle+turnAmount;
         int turnFactor = (int) (turnAmount/Math.abs(turnAmount));// (turnAmount/Math.abs(turnAmount) determines if right or left. if left this value will be -1 and swap power values
-        double initialPower = Math.abs(Math.abs(angles.firstAngle-initialAngle)-Math.abs(turnAmount))>30?.5:.5/(30/Math.abs(Math.abs(angles.firstAngle-initialAngle)-Math.abs(turnAmount)));//.5/(30/x) x is how close to desired angle
+        double initialPower = /*Math.abs(Math.abs(angles.firstAngle-initialAngle)-Math.abs(turnAmount))>30?.5:*/Range.clip(.5/(60/Math.abs(Math.abs(angles.firstAngle-initialAngle)-Math.abs(turnAmount))),.05,.5);//.5/(30/x) x is how close to desired angle
         telemetry.addData("current angle", angles.firstAngle);
         telemetry.addData("initial angle", initialAngle);
         telemetry.addData("desired angle", desiredAngle);
         telemetry.addData("angle difference", Math.abs(Math.abs(angles.firstAngle-initialAngle)-Math.abs(turnAmount)));
         telemetry.addData("initial power", initialPower);
+        telemetry.addData("current power", Range.clip(.5/(60/Math.abs(Math.abs(angles.firstAngle-initialAngle)-Math.abs(turnAmount))),.05,1));
         telemetry.update();
         leftFront.setPower(initialPower*turnFactor);
         rightFront.setPower(-initialPower*turnFactor);
         leftBack.setPower(initialPower*turnFactor);
         rightBack.setPower(-initialPower*turnFactor);
-        while(Math.abs(Math.abs(angles.firstAngle-initialAngle)-Math.abs(turnAmount))>5){ // (angles.firstAngle-initialAngle-Math.abs(turnAmount)) is the difference between current angle and desired. Closer to desired angle = lower value.
+
+        while((int)Math.abs(Math.abs(angles.firstAngle-initialAngle)-Math.abs(turnAmount))>5){ // (angles.firstAngle-initialAngle-Math.abs(turnAmount)) is the difference between current angle and desired. Closer to desired angle = lower value.
             angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
-            if(Math.abs(Math.abs(angles.firstAngle-initialAngle)-Math.abs(turnAmount))<30){
-                leftFront.setPower(.5/(30/Math.abs(Math.abs(angles.firstAngle-initialAngle)-Math.abs(turnAmount)))*turnFactor);
-                rightFront.setPower(-.5/(30/Math.abs(Math.abs(angles.firstAngle-initialAngle)-Math.abs(turnAmount)))*turnFactor);
-                leftBack.setPower(.5/(30/Math.abs(Math.abs(angles.firstAngle-initialAngle)-Math.abs(turnAmount)))*turnFactor);
-                rightBack.setPower(-.5/(30/Math.abs(Math.abs(angles.firstAngle-initialAngle)-Math.abs(turnAmount)))*turnFactor);
-            }
+            //if(Math.abs(Math.abs(angles.firstAngle-initialAngle)-Math.abs(turnAmount))<30){
+            leftFront.setPower(Range.clip(.5/(60/Math.abs(Math.abs(angles.firstAngle-initialAngle)-Math.abs(turnAmount))),.05,.5)*turnFactor);
+            rightFront.setPower(-Range.clip(.5/(60/Math.abs(Math.abs(angles.firstAngle-initialAngle)-Math.abs(turnAmount))),.05,.5)*turnFactor);
+            leftBack.setPower(Range.clip(.5/(60/Math.abs(Math.abs(angles.firstAngle-initialAngle)-Math.abs(turnAmount))),.05,.5)*turnFactor);
+            rightBack.setPower(-Range.clip(.5/(60/Math.abs(Math.abs(angles.firstAngle-initialAngle)-Math.abs(turnAmount))),.05,.5)*turnFactor);
+            //}
+            telemetry.addData("current angle", angles.firstAngle);
+            telemetry.addData("initial angle", initialAngle);
+            telemetry.addData("desired angle", desiredAngle);
+            telemetry.addData("angle difference", Math.abs(Math.abs(angles.firstAngle-initialAngle)-Math.abs(turnAmount)));
+            telemetry.addData("initial power", initialPower);
+            telemetry.addData("current power", Range.clip(.5/(60/Math.abs(Math.abs(angles.firstAngle-initialAngle)-Math.abs(turnAmount))),.05,.5));
             telemetry.update();
             heartbeat();
         }
@@ -536,6 +589,12 @@ public class AutoMain extends LinearOpMode {
         ElapsedTime wait = new ElapsedTime();
         while(wait.milliseconds()<1000){
             angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+            telemetry.addData("current angle", angles.firstAngle);
+            telemetry.addData("initial angle", initialAngle);
+            telemetry.addData("desired angle", desiredAngle);
+            telemetry.addData("angle difference", Math.abs(Math.abs(angles.firstAngle-initialAngle)-Math.abs(turnAmount)));
+            telemetry.addData("initial power", initialPower);
+            telemetry.addData("current power", Range.clip(.5/(60/Math.abs(Math.abs(angles.firstAngle-initialAngle)-Math.abs(turnAmount))),.05,.5));
             telemetry.update();
             heartbeat();
         }

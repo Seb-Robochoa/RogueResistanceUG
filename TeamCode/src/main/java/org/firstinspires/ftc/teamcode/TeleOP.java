@@ -106,8 +106,6 @@ public class TeleOP extends OpMode {
 
         //Increasing the power gradually
         //int power = (DcMotorSimple) arm.getPower();
-
-
         //toggles precision mode if the right stick button is pressed
 
 
@@ -167,6 +165,7 @@ public class TeleOP extends OpMode {
         telemetry.addData("Power shot mode:", getShotMode());
         telemetry.addData("One driver: ", getDrive());
         telemetry.addData("RB",gamepad1.right_bumper);
+        angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
         telemetry.addData("angle",angles.firstAngle);
         telemetry.update();
 
@@ -292,7 +291,7 @@ public class TeleOP extends OpMode {
 
     public void snapBot() {
         if(gamepad1.right_bumper){
-            double turnAmount=-angles.firstAngle;
+            double turnAmount=-angles.firstAngle;//right is negative
 
             leftFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
             leftBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -304,6 +303,28 @@ public class TeleOP extends OpMode {
             rightFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
             rightBack.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
+            int turnFactor = (int) (turnAmount/Math.abs(turnAmount));
+
+            leftFront.setPower(turnFactor);
+            rightFront.setPower(-turnFactor);
+            leftBack.setPower(turnFactor);
+            rightBack.setPower(-turnFactor);
+
+            telemetry.addData("turnAmount",turnAmount);
+            telemetry.addData("currentPower",Range.clip(1/(180/Math.abs(angles.firstAngle-turnAmount)),.1,1));
+            telemetry.update();
+
+            while(Math.abs(angles.firstAngle)>1){
+                angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+                leftFront.setPower(Range.clip(1/(180/Math.abs(angles.firstAngle-turnAmount)),.1,1)*turnFactor);//current angle-amount we want to turn =
+                rightFront.setPower(-Range.clip(1/(180/Math.abs(angles.firstAngle-turnAmount)),.1,1)*turnFactor);
+                leftBack.setPower(Range.clip(1/(180/Math.abs(angles.firstAngle-turnAmount)),.1,1)*turnFactor);
+                rightBack.setPower(-Range.clip(1/(180/Math.abs(angles.firstAngle-turnAmount)),.1,1)*turnFactor);
+
+                telemetry.addData("turnAmount",turnAmount);
+                telemetry.addData("currentPower",Range.clip(1/(180/Math.abs(angles.firstAngle-turnAmount)),.1,1));
+                telemetry.update();
+            }
 
             leftFront.setPower(0);
             rightFront.setPower(0);

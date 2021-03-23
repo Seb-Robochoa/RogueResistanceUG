@@ -38,7 +38,7 @@ public class TeleOP extends OpMode {
     private BNO055IMU imu;
     private ElapsedTime runtime;
     private double servo;
-    double shooterPower = .75;
+    double shooterPower = .71;
     boolean shotMode = false;
     boolean clawReady = false;
     ElapsedTime timer = new ElapsedTime();
@@ -186,7 +186,7 @@ public class TeleOP extends OpMode {
                 shooterPower = .65;
                 shotMode = true;
             } else if (gamepad1.dpad_right && shotMode) {
-                shooterPower = .75;
+                shooterPower = .71;
                 shotMode = false;
             }
         }
@@ -195,7 +195,7 @@ public class TeleOP extends OpMode {
                 shooterPower = .65;
                 shotMode = true;
             } else if (gamepad1.x && shotMode) {
-                shooterPower = .75;
+                shooterPower = .71;
                 shotMode = false;
             }
         }
@@ -290,6 +290,8 @@ public class TeleOP extends OpMode {
     }
 
     public void snapBot() {
+        angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+
         if(gamepad1.right_bumper){
             double turnAmount=-angles.firstAngle;//right is negative
 
@@ -305,24 +307,24 @@ public class TeleOP extends OpMode {
 
             int turnFactor = (int) (turnAmount/Math.abs(turnAmount));
 
-            leftFront.setPower(turnFactor);
-            rightFront.setPower(-turnFactor);
-            leftBack.setPower(turnFactor);
-            rightBack.setPower(-turnFactor);
+            leftFront.setPower(-turnFactor*3);
+            rightFront.setPower(turnFactor*3);
+            leftBack.setPower(-turnFactor*3);
+            rightBack.setPower(turnFactor*3);
 
             telemetry.addData("turnAmount",turnAmount);
-            telemetry.addData("currentPower",Range.clip(1/(180/Math.abs(angles.firstAngle-turnAmount)),.1,1));
+            telemetry.addData("currentPower",Range.clip(1/(Math.abs(turnAmount-angles.firstAngle)/Math.abs(angles.firstAngle)),0,3));
+            telemetry.addData("distance difference", turnAmount-angles.firstAngle);
             telemetry.update();
 
-            while(Math.abs(angles.firstAngle)>1){
+            while(Math.abs(angles.firstAngle)>4){
                 angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
-                leftFront.setPower(Range.clip(1/(180/Math.abs(angles.firstAngle-turnAmount)),.1,1)*turnFactor);//current angle-amount we want to turn =
-                rightFront.setPower(-Range.clip(1/(180/Math.abs(angles.firstAngle-turnAmount)),.1,1)*turnFactor);
-                leftBack.setPower(Range.clip(1/(180/Math.abs(angles.firstAngle-turnAmount)),.1,1)*turnFactor);
-                rightBack.setPower(-Range.clip(1/(180/Math.abs(angles.firstAngle-turnAmount)),.1,1)*turnFactor);
-
+                leftFront.setPower(-Range.clip(1/(Math.abs(turnAmount-angles.firstAngle)/Math.abs(angles.firstAngle)),0,3)*turnFactor);//current angle-amount we want to turn =
+                rightFront.setPower(Range.clip(1/(Math.abs(turnAmount-angles.firstAngle)/Math.abs(angles.firstAngle)),0,3)*turnFactor);
+                leftBack.setPower(-Range.clip(1/(Math.abs(turnAmount-angles.firstAngle)/Math.abs(angles.firstAngle)),0,3)*turnFactor);
+                rightBack.setPower(Range.clip(1/(Math.abs(turnAmount-angles.firstAngle)/Math.abs(angles.firstAngle)),0,3)*turnFactor);
                 telemetry.addData("turnAmount",turnAmount);
-                telemetry.addData("currentPower",Range.clip(1/(180/Math.abs(angles.firstAngle-turnAmount)),.1,1));
+                telemetry.addData("currentPower",Range.clip(1/(Math.abs(turnAmount-angles.firstAngle)/Math.abs(angles.firstAngle)),0,3));
                 telemetry.update();
             }
 
@@ -334,7 +336,8 @@ public class TeleOP extends OpMode {
             leftFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
             leftBack.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
             rightFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-            rightBack.setMode(DcMotor.RunMode.RUN_USING_ENCODER);        }
+            rightBack.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        }
     }
 
 
@@ -472,7 +475,7 @@ public class TeleOP extends OpMode {
 //        return false;
 //    }
 //    public void powerShots(){ //needs testing
-//        if(gamepad1.start){
+//        if(gamepad1.f){
 //            //use bettermovebot if possible. WIP
 //            moveBot(1,2,2,1,44,.6,false); //will be to better movement updated later
 //            shooter.setPower(-shooterPower);

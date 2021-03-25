@@ -161,6 +161,8 @@ public class TeleOP extends OpMode {
         toggleHolder(); // toggles intake clip
         armTravel2(); // second player arm function
         snapBot();
+        speak();
+        
 
         telemetry.addData("Power shot mode:", getShotMode());
         telemetry.addData("One driver: ", getDrive());
@@ -459,7 +461,11 @@ public class TeleOP extends OpMode {
         }
         return false;
     }
-
+    public void speak() {
+        if(gamepad2.b){
+            telemetry.speak("FOR JON IN JON ON JON");
+        }
+    }
 
 //    public boolean checkRB()
 //    {

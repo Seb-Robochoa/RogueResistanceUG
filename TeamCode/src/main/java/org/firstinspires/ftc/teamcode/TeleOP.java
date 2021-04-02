@@ -38,7 +38,7 @@ public class TeleOP extends OpMode {
     private BNO055IMU imu;
     private ElapsedTime runtime;
     private double servo;
-    double shooterPower = .71;
+    double shooterPower = .69;
     boolean shotMode = false;
     boolean clawReady = false;
     ElapsedTime timer = new ElapsedTime();
@@ -188,7 +188,7 @@ public class TeleOP extends OpMode {
                 shooterPower = .65;
                 shotMode = true;
             } else if (gamepad1.dpad_right && shotMode) {
-                shooterPower = .71;
+                shooterPower = .69;
                 shotMode = false;
             }
         }
@@ -197,7 +197,7 @@ public class TeleOP extends OpMode {
                 shooterPower = .65;
                 shotMode = true;
             } else if (gamepad1.x && shotMode) {
-                shooterPower = .71;
+                shooterPower = .69;
                 shotMode = false;
             }
         }

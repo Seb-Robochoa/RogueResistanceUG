@@ -32,7 +32,7 @@ public class TeleOP extends OpMode {
     boolean clawState = false;
     boolean flicktime = false;
     double armPos = 0;
-    private Servo claw, flicker, holder; //claw, flicker, holder
+    private Servo claw, flicker, holder, cheese; //claw, flicker, holder
     boolean reverse;
     int reverseFactor;
     private BNO055IMU imu;
@@ -48,6 +48,10 @@ public class TeleOP extends OpMode {
     boolean armmove = false;
     final static double dropWobbleTime = 1000;
     Orientation angles;
+    boolean CheeseWas = false;
+    boolean CheeseIs = false;
+    boolean CheeseState = false;
+    boolean CheeseUp = true;
 
 
 
@@ -67,6 +71,7 @@ public class TeleOP extends OpMode {
         claw = hardwareMap.servo.get("claw");
         flicker = hardwareMap.servo.get("flicker");
         holder = hardwareMap.servo.get("holder");
+        cheese = hardwareMap.servo.get("cheese");
         //Initialize all the hardware to use Encoders
         leftFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         leftBack.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
@@ -101,6 +106,7 @@ public class TeleOP extends OpMode {
 
         angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
         initialAngle=angles.firstAngle;
+        cheese.setPosition(.46);
     }
 
 
@@ -110,8 +116,10 @@ public class TeleOP extends OpMode {
         //Increasing the power gradually
         //int power = (DcMotorSimple) arm.getPower();
         //toggles precision mode if the right stick button is pressed
-
-
+        CheeseIs = gamepad2.a;
+        if(CheeseIs && !CheeseWas){
+            CheeseState = true;
+        }
         //sets the factor multiplied to the power of the motors
         factor = togglePrecision ? .3 : 1; //the power is 1/5th of its normal value while in precision mode
         if(!leftFront.isBusy()&&!leftBack.isBusy()&&!rightFront.isBusy()&&!rightBack.isBusy()) {
@@ -164,7 +172,7 @@ public class TeleOP extends OpMode {
         toggleHolder(); // toggles intake clip
         armTravel2(); // second player arm function
         snapBot();
-        speak();
+        //speak();
 
 
         telemetry.addData("Power shot mode:", getShotMode());
@@ -174,6 +182,7 @@ public class TeleOP extends OpMode {
         telemetry.addData("angle",angles.firstAngle);
         telemetry.update();
 
+        CheeseWas = CheeseIs;
         //}
     }
 
@@ -182,6 +191,18 @@ public class TeleOP extends OpMode {
             shooter.setPower(-shooterPower);
         } else {
             shooter.setPower(0);
+        }
+    }
+    public void cheeseStick(){
+        if(CheeseState && CheeseUp){
+            CheeseState = false;
+            cheese.setPosition(.78);
+            CheeseUp = false;
+        }
+        if(CheeseState && !CheeseUp){
+            CheeseState = false;
+            cheese.setPosition(.46);
+            CheeseUp = true;
         }
     }
 

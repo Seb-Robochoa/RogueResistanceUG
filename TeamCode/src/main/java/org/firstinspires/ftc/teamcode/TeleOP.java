@@ -50,7 +50,9 @@ public class TeleOP extends OpMode {
     Orientation angles;
 
 
-    //double initialAngle = currentAngle();
+
+
+    double initialAngle ;
     @Override
     public void init() {
         //Maps all the variables to its respective hardware
@@ -98,6 +100,7 @@ public class TeleOP extends OpMode {
         reverse = false;
 
         angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+        initialAngle=angles.firstAngle;
     }
 
 
@@ -162,7 +165,7 @@ public class TeleOP extends OpMode {
         armTravel2(); // second player arm function
         snapBot();
         speak();
-        
+
 
         telemetry.addData("Power shot mode:", getShotMode());
         telemetry.addData("One driver: ", getDrive());
@@ -302,31 +305,47 @@ public class TeleOP extends OpMode {
             rightFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
             rightBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
-            leftFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-            leftBack.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-            rightFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-            rightBack.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            leftFront.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+            leftBack.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+            rightFront.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+            rightBack.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
             int turnFactor = (int) (turnAmount/Math.abs(turnAmount));
-
-            leftFront.setPower(-turnFactor*3);
-            rightFront.setPower(turnFactor*3);
-            leftBack.setPower(-turnFactor*3);
-            rightBack.setPower(turnFactor*3);
+            double initialPower;
+            double minSpeed;
+            if(Math.abs(angles.firstAngle)<=85&&Math.abs(angles.firstAngle)>45){
+                initialPower=.5;
+                minSpeed=.2;
+            }
+            else if(Math.abs(angles.firstAngle)<=45){
+                initialPower=.4;
+                minSpeed=.1;
+            }
+            else{
+                initialPower=1;
+                minSpeed=.4;
+            }
+            leftFront.setPower(-turnFactor*initialPower);
+            rightFront.setPower(turnFactor*initialPower);
+            leftBack.setPower(-turnFactor*initialPower);
+            rightBack.setPower(turnFactor*initialPower);
 
             telemetry.addData("turnAmount",turnAmount);
-            telemetry.addData("currentPower",Range.clip(1/(Math.abs(turnAmount-angles.firstAngle)/Math.abs(angles.firstAngle)),0,3));
-            telemetry.addData("distance difference", turnAmount-angles.firstAngle);
+            telemetry.addData("currentPower",leftFront.getPower());
+            telemetry.addData("angle difference", angles.firstAngle);
+            telemetry.addData("currentAngle",angles.firstAngle);
             telemetry.update();
 
-            while(Math.abs(angles.firstAngle)>4){
+            while(Math.abs(angles.firstAngle)>5){ //make if statement
                 angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
-                leftFront.setPower(-Range.clip(1/(Math.abs(turnAmount-angles.firstAngle)/Math.abs(angles.firstAngle)),0,3)*turnFactor);//current angle-amount we want to turn =
-                rightFront.setPower(Range.clip(1/(Math.abs(turnAmount-angles.firstAngle)/Math.abs(angles.firstAngle)),0,3)*turnFactor);
-                leftBack.setPower(-Range.clip(1/(Math.abs(turnAmount-angles.firstAngle)/Math.abs(angles.firstAngle)),0,3)*turnFactor);
-                rightBack.setPower(Range.clip(1/(Math.abs(turnAmount-angles.firstAngle)/Math.abs(angles.firstAngle)),0,3)*turnFactor);
+                leftFront.setPower(-Range.clip((Math.abs(angles.firstAngle)/Math.abs(turnAmount)),minSpeed,initialPower)*turnFactor);//current angle-amount we want to turn =
+                rightFront.setPower(Range.clip((Math.abs(angles.firstAngle)/Math.abs(turnAmount)),minSpeed,initialPower)*turnFactor);
+                leftBack.setPower(-Range.clip((Math.abs(angles.firstAngle)/Math.abs(turnAmount)),minSpeed,initialPower)*turnFactor);
+                rightBack.setPower(Range.clip((Math.abs(angles.firstAngle)/Math.abs(turnAmount)),minSpeed,initialPower)*turnFactor);
                 telemetry.addData("turnAmount",turnAmount);
-                telemetry.addData("currentPower",Range.clip(1/(Math.abs(turnAmount-angles.firstAngle)/Math.abs(angles.firstAngle)),0,3));
+                telemetry.addData("currentPower",leftFront.getPower());
+                telemetry.addData("angle difference", angles.firstAngle);
+                telemetry.addData("currentAngle",angles.firstAngle);
                 telemetry.update();
             }
 

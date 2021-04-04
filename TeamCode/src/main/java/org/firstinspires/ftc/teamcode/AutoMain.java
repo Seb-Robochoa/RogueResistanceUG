@@ -75,6 +75,10 @@ public class AutoMain extends LinearOpMode {
         initialize();
 
         //Moves the bot forward
+        /*(10);snapBot();pause(500);
+        turn(-10);snapBot();pause(500);
+        turn(15);snapBot();pause(500);
+        turn(-15);snapBot();pause(500);
         turn(90);snapBot();pause(500);
         turn(-90);snapBot();pause(500);
         turn(45);snapBot();pause(500);
@@ -84,14 +88,17 @@ public class AutoMain extends LinearOpMode {
         turn(120);snapBot();pause(500);
         turn(-120);snapBot();pause(500);//test degrees close to 180, as 180 doesnt work with snap
 
-
+        */
 
 
         //If there are only 0 rings detected by the robot
-//        if(scenario == 0) //zone A
-//        {
-//            firstShot();
-//            moveBot(FORWARD, 18, .75, true); //forward
+        if(scenario == 0) //zone A
+        {
+
+            moveBot(FORWARD, 56, .85, true); pause(250);//forward
+            moveBot(RIGHT, 37, .85, true);pause(250);
+            snapBot();
+            powerShot();
 //            updateY(18);
 //            turn(-90);
 //            //x += -16;
@@ -100,37 +107,36 @@ public class AutoMain extends LinearOpMode {
 //            //moveBot(BACKWARD, 15, .75, true);
 //            //secondWobbler();
 //            updateTelemetry();
-//        }
-//        if(scenario == 1) { //zone B
-//            firstShot();
-//            moveBot(FORWARD, 20, .75, true); //forward
-//            updateY(20);
-//            moveBot(RIGHT,18, .75, true); //strafe right
-//            updateX(18);
-//            armTravel();
-//            updateTelemetry();
-//        }
-//        if(scenario == 4){ //zone C
-//            firstShot();
-//            moveBot(LEFT,11, .6, true); //strafe left
-//            updateX(-11);
-//            moveBot(TURNRIGHT,1,.6,true);
-//            moveBot(FORWARD, 51, .6, true); //forward
-//            updateY(51);
-//            armTravel();
-//            moveBot(BACKWARD, 39, .6, true); //backward
-//            updateY(-39);
-//            updateTelemetry();
-//        }
-//
-//
-//        updateTelemetry();
-//
-//
-//        claw.setPosition(1);
-//
-//        backZero(1500);
+        }
+        if(scenario == 1) { //zone B
+            firstShot();
+            moveBot(FORWARD, 20, .75, true); //forward
+            updateY(20);
+            moveBot(RIGHT,18, .75, true); //strafe right
+            updateX(18);
+            armTravel();
+            updateTelemetry();
+        }
+        if(scenario == 4){ //zone C
+            firstShot();
+            moveBot(LEFT,11, .6, true); //strafe left
+            updateX(-11);
+            moveBot(TURNRIGHT,1,.6,true);
+            moveBot(FORWARD, 51, .6, true); //forward
+            updateY(51);
+            armTravel();
+            moveBot(BACKWARD, 39, .6, true); //backward
+            updateY(-39);
+            updateTelemetry();
+        }
 
+
+        updateTelemetry();
+
+
+        claw.setPosition(1);
+
+        snapBot();
 
         //0 Void 1 Forward 2 Reverse
 
@@ -439,7 +445,7 @@ public class AutoMain extends LinearOpMode {
     }
 
     public void powerShot() throws InterruptedException {
-        double pow = -.69;
+        double pow = -.63;
         shooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         shooter.setPower(pow);
         //Target position for shooting
@@ -634,20 +640,20 @@ public class AutoMain extends LinearOpMode {
         rightFront.setPower(0);
         leftBack.setPower(0);
         rightBack.setPower(0);
-        /*ElapsedTime wait = new ElapsedTime();
-        while(wait.milliseconds()<5000){
-            angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
-            telemetry.addData("desired angle change", turnAmount);
-            telemetry.addData("current angle", angles.firstAngle);
-            telemetry.addData("start angle", startAngle);
-            telemetry.addData("degrees turned", Math.abs(angles.firstAngle-startAngle));
-            telemetry.addData("desired angle", desiredAngle);
-            telemetry.addData("angle difference", Math.abs(Math.abs(angles.firstAngle-startAngle)-Math.abs(turnAmount)));
-            telemetry.addData("initial power", initialPower);
-            telemetry.addData("current power", Range.clip(.5/(60/Math.abs(Math.abs(angles.firstAngle-startAngle)-Math.abs(turnAmount))),.1,.5));
-            telemetry.update();
-            heartbeat();
-        }*/
+//        ElapsedTime wait = new ElapsedTime();
+//        while(wait.milliseconds()<5000){
+//            angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+//            telemetry.addData("desired angle change", turnAmount);
+//            telemetry.addData("current angle", angles.firstAngle);
+//            telemetry.addData("start angle", startAngle);
+//            telemetry.addData("degrees turned", Math.abs(angles.firstAngle-startAngle));
+//            telemetry.addData("desired angle", desiredAngle);
+//            telemetry.addData("distance to desired", Math.abs(Math.abs(angles.firstAngle)-Math.abs(desiredAngle)));
+//            telemetry.addData("initial power", initialPower);
+//            telemetry.addData("current power", leftFront.getPower());
+//            telemetry.update();
+//            heartbeat();
+//        }
     }
 
     //----------------------------------------------------------------------------
@@ -670,7 +676,7 @@ public class AutoMain extends LinearOpMode {
         static final int REGION_HEIGHT = 25;
 
         final int FOUR_RING_THRESHOLD = 150;
-        final int ONE_RING_THRESHOLD = 135;
+        final int ONE_RING_THRESHOLD = 137;
 
         Point region1_pointA = new Point(
                 REGION1_TOPLEFT_ANCHOR_POINT.x,

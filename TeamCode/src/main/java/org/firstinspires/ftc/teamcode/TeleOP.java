@@ -172,6 +172,7 @@ public class TeleOP extends OpMode {
         toggleHolder(); // toggles intake clip
         armTravel2(); // second player arm function
         snapBot();
+        cheeseStick();
         //speak();
 
 
@@ -318,7 +319,7 @@ public class TeleOP extends OpMode {
     public void snapBot() {
         angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
 
-        if(gamepad1.right_bumper){
+        if(gamepad1.left_bumper){
             double turnAmount=-angles.firstAngle;//right is negative
 
             leftFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);

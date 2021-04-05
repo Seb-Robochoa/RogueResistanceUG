@@ -197,7 +197,7 @@ public class TeleOP extends OpMode {
     public void cheeseStick(){
         if(CheeseState && CheeseUp){
             CheeseState = false;
-            cheese.setPosition(.78);
+            cheese.setPosition(.82);
             CheeseUp = false;
         }
         if(CheeseState && !CheeseUp){
@@ -384,7 +384,7 @@ public class TeleOP extends OpMode {
     }
 
 
-    public void toggleHolder() {// not really useful, just to make it possible to toggle the holder if needed. KINDA WORKS
+    public void toggleHolder() {// not really useful, just to make it possible to toggle the holder if needed.
         if(driveOne) {
             if (gamepad1.dpad_up) {
                 holder.setPosition(1);
@@ -475,11 +475,11 @@ public class TeleOP extends OpMode {
                 arm.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
                 arm.setPower(.6);
             } else {
-                arm.setPower(0);
-                //arm.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                //arm.setTargetPosition(arm.getCurrentPosition());
-                //arm.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                //arm.setPower(1);
+
+                arm.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                arm.setTargetPosition(arm.getCurrentPosition());
+                arm.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                arm.setPower(.2);
             }
             if (gamepad2.right_trigger > .499999) {
                 claw.setPosition(0);

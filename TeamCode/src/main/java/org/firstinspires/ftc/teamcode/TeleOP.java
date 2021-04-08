@@ -174,6 +174,7 @@ public class TeleOP extends OpMode {
         armTravel2(); // second player arm function
         snapBot();
         cheeseStick();
+        rocketFart();
         //speak();
 
 
@@ -188,6 +189,26 @@ public class TeleOP extends OpMode {
         //}
     }
 
+
+    public void rocketFart()
+    {
+        flick.reset();
+        int breathe = 250;
+        boolean shoot = true;
+        if(gamepad1.b)
+            while(flick.milliseconds() <= 1500)
+            {
+                if(flick.milliseconds() % breathe == 0)
+                    shoot = true;
+                else if(flick.milliseconds() % breathe == 50)
+                    shoot = false;
+                if (shoot)
+                    flicker.setPosition(.35);
+                else if(!shoot)
+                    flicker.setPosition(.64);
+            }
+
+    }
     public void revShoot() { // controls the flywheel WORKS
         if (gamepad1.right_trigger > .499999) {
             shooter.setPower(-shooterPower);

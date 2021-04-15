@@ -107,7 +107,9 @@ public class AutoMain extends LinearOpMode {
         if(scenario == 0) //zone A
         {
 
-            moveBot(FORWARD, 56, .85, "straight"); //forward
+            //moveBot(FORWARD, 56, .25, "straight"); //forward
+            //moveByWheelEncoders(0, 48, .4, "straight");
+            strafeByWheelEncoders(-90, 48, .4, "strafe right");
             // moveBot(RIGHT, 37, .85, "straferight");
 
             //snapBot();
@@ -437,22 +439,66 @@ public class AutoMain extends LinearOpMode {
         int travel = (int) (distance * TPI);
 
         for (DcMotorEx motor : motors) {
-            motor.setTargetPosition(travel);
+
             motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-            motor.setPower(power);
-            motor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
         }
 
         //This is what checks if the motors are supposed to be still running.
-        while (leftFront.isBusy() && leftBack.isBusy() && rightFront.isBusy() && rightBack.isBusy()) {
+        while (leftFront.getCurrentPosition() < travel  && leftBack.getCurrentPosition() < travel && rightFront.getCurrentPosition() < travel && rightBack.getCurrentPosition() < travel) {
             //heartbeat();
             angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
-            correction(power, 0, moveType);
+            correction(power, 0, moveType, false, .4);
+            opModeIsActive();
 
+
+        }
+        for (DcMotorEx motor : motors) {
+            motor.setPower(0);
         }
 
         print();
+
+
+
+
     }
+
+    public boolean motorsBusy(int ticks, double startingPosition) {
+        return Math.abs(leftBack.getCurrentPosition() - startingPosition) < ticks && Math.abs(rightBack.getCurrentPosition() - startingPosition) < ticks && Math.abs(leftFront.getCurrentPosition() - startingPosition) < ticks && Math.abs(rightFront.getCurrentPosition() - startingPosition) < ticks;
+    }
+
+
+    public void moveByWheelEncoders(double targetHeading, double inches, double power, String movementType) throws InterruptedException {
+        resetMotors();
+
+        double currentPosition = leftBack.getCurrentPosition();
+
+        int ticks = (int)(inches * TPI);
+
+        while (motorsBusy(ticks, currentPosition)) {
+            heartbeat();
+            correction(-power, targetHeading, movementType, false, 1);
+        }
+
+        halt();
+    }
+    public void strafeByWheelEncoders(double targetHeading, double inches, double power, String movementType) throws InterruptedException {
+        resetMotors();
+
+        double currentPosition = leftBack.getCurrentPosition();
+
+        int ticks = (int)(inches * TPI * 1.2);
+
+        while (motorsBusy(ticks, currentPosition)) {
+            heartbeat();
+            correction(-power, targetHeading, movementType, false, 1);
+        }
+
+        halt();
+    }
+
 
     public void lowestFactor() throws InterruptedException{
         double smallestAngle = Math.abs(storage.get(0)[4]);
@@ -507,86 +553,85 @@ public class AutoMain extends LinearOpMode {
     }
 
     //Returns the current angle of the robot calculated by the IMU
-    public double currentAngle() throws InterruptedException{
+    public double currentAngle() {
         angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
         return angles.firstAngle;
     }
 
-    public void correction (double power, double targetHeading, String movementType) throws InterruptedException
-    {
+    public void correction(double power, double targetHeading, String movementType, boolean inverted, double max) {
         //sets target and current angles
-
-
         double target = targetHeading;
         double current = currentAngle();
 
-        if(Math.abs(current - target) < 5)
-            return;
-
-
-        telemetry.addData("Velocity ",rightBack.getVelocity());
-        telemetry.update();
-
-        Double[] calledArray = new Double[5];
+        //if the spline motion is backwards, the target must be flipped 180 degrees in order to match with spline.getAngle()
+        if (inverted && movementType.contains("spline")) {
+            target = (targetHeading > 0) ? (targetHeading - 180) : (targetHeading + 180);
+        }
 
         //when axis between -179 and 179 degrees is crossed, degrees must be converted from 0 - 360 degrees. 179-(-179) = 358. 179 - 181 = -2. Big difference
-        if (targetHeading < -135 && currentAngle() > 135) {
-            target = targetHeading + 360.0;
-        } else if (targetHeading > 135 && currentAngle() < -135) {
-            current = currentAngle() + 360.0;
-        }
-
-        if (target > 180) {
-            target -= 360;
-        } else if (target < -180) {
-            target += 360;
-        }
-
+        double error = getError(current, target);
 
         //PD correction for both regular and spline motion
         if (movementType.contains("straight") || movementType.contains("spline")) {
-            leftFront.setPower(-Range.clip(power + forwardPID.getCorrection(target - current, runtime), -1.0, 1.0));
-            rightFront.setPower(Range.clip(power - forwardPID.getCorrection(target - current, runtime), -1.0, 1.0));
-            leftBack.setPower(-Range.clip(power + forwardPID.getCorrection(target - current, runtime), -1.0, 1.0));
-            rightBack.setPower(Range.clip(power - forwardPID.getCorrection(target - current, runtime), -1.0, 1.0));
+            double correction = forwardPID.getCorrection(error, runtime);
 
-            calledArray[0] = Range.clip(power + forwardPID.getCorrection(target - current, runtime), -1.0, 1.0);
-            calledArray[1] = Range.clip(power - forwardPID.getCorrection(target - current, runtime), -1.0, 1.0);
-            calledArray[2] = Range.clip(power + forwardPID.getCorrection(target - current, runtime), -1.0, 1.0);
-            calledArray[3] = Range.clip(power - forwardPID.getCorrection(target - current, runtime), -1.0, 1.0);
-            calledArray[4] = currentAngle() - target;
+            double leftPower = Range.clip(power - correction, -max, max);
+            double rightPower = Range.clip(power + correction, -max, max);
 
-            storage.add(calledArray);
-
+            leftFront.setPower(leftPower);
+            rightFront.setPower(rightPower);
+            leftBack.setPower(leftPower);
+            rightBack.setPower(rightPower);
+//            telemetry.addData("left expected power", leftPower);
+//            telemetry.addData("right expected power", rightPower);
+//            telemetry.addData("actual left power", leftFront.getPower());
+//            telemetry.addData("actual right power", rightFront.getPower());
         }
 
         //pd correction for strafe motion. Right and left are opposites
         else if (movementType.contains("strafe")) {
+            double correction = strafePID.getCorrection(error, runtime);
+
             if (movementType.contains("left")) {
-                leftFront.setPower(Range.clip(-power + strafePID.getCorrection(target - current, runtime), -1.0, 1.0));
-                rightFront.setPower(Range.clip(power - strafePID.getCorrection(target - current, runtime), -1.0, 1.0));
-                leftBack.setPower(Range.clip(power + strafePID.getCorrection(target - current, runtime), -1.0, 1.0));
-                rightBack.setPower(Range.clip(-power - strafePID.getCorrection(target - current, runtime), -1.0, 1.0));
+                leftFront.setPower(Range.clip(-power - correction, -1.0, 1.0));
+                rightFront.setPower(Range.clip(power + correction, -1.0, 1.0));
+                leftBack.setPower(Range.clip(power - correction, -1.0, 1.0));
+                rightBack.setPower(Range.clip(-power + correction, -1.0, 1.0));
             } else if (movementType.contains("right")) {
-                leftFront.setPower(Range.clip(power + strafePID.getCorrection(target - current, runtime), -1.0, 1.0));
-                rightFront.setPower(Range.clip(-power - strafePID.getCorrection(target - current, runtime), -1.0, 1.0));
-                leftBack.setPower(Range.clip(-power + strafePID.getCorrection(target - current, runtime), -1.0, 1.0));
-                rightBack.setPower(Range.clip(power - strafePID.getCorrection(target - current, runtime), -1.0, 1.0));
+                leftFront.setPower(Range.clip(power - correction, -1.0, 1.0));
+                rightFront.setPower(Range.clip(-power + correction, -1.0, 1.0));
+                leftBack.setPower(Range.clip(-power - correction, -1.0, 1.0));
+                rightBack.setPower(Range.clip(power + correction, -1.0, 1.0));
             }
         }
 
-        telemetry.addData("correction",forwardPID.getCorrection(target-current,runtime));
-        telemetry.addData("angle", current);
-        telemetry.addData("target", target);
-        telemetry.addData("error", current - target);
-        telemetry.addData("power BR", rightBack.getPower());
-        telemetry.addData("power BL", leftBack.getPower());
-        telemetry.addData("power FR", rightFront.getPower());
-        telemetry.addData("power FL", leftFront.getPower());
-        telemetry.update();
-
-
+//        telemetry.addData("current Angle", current);
+//        telemetry.addData("target", target);
+//        telemetry.addData("error", error);
+//        telemetry.addData("lf", leftFront.getPower());
+//        telemetry.addData("lb", leftBack.getPower());
+//        telemetry.addData("rf", rightFront.getPower());
+//        telemetry.addData("rb", rightBack.getPower());
+//        telemetry.addData("avg power", (rightBack.getPower() + rightFront.getPower() + leftBack.getPower() + leftFront.getPower()) / 4);
+//        telemetry.update();
     }
+    public double getError(double current, double target) {
+        double error;
+
+        double error1 = /*current - target*/ target - current;
+        double error2;
+        if (current < 0)
+            error2 = /*(current + 360) - (target);*/ target - (current + 360);
+        else
+            error2 = /*(current - 360) - (target);*/ target - (current - 360);
+        if (Math.abs(error1) <= Math.abs(error2))
+            error = error1;
+        else
+            error = error2;
+
+        return error;
+    }
+
 
     public void print() throws InterruptedException{
         ElapsedTime aman = new ElapsedTime();
@@ -921,5 +966,5 @@ public class AutoMain extends LinearOpMode {
 
 
 
-
 }
+

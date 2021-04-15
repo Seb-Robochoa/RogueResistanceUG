@@ -28,6 +28,8 @@ import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
+import java.util.ArrayList;
+
 
 import com.qualcomm.hardware.bosch.BNO055IMU;
 
@@ -66,7 +68,18 @@ public class AutoMain extends LinearOpMode {
     double forwardAngles;
     double turnKp;
     private double initialAngle;
+    private ArrayList<Double []> storage;
 
+
+    //PID stuff
+    //private PID forwardPID = new PID(.022, 0.0003, 0.0022);
+    // private PID strafePID = new PID(.02, .0003, 0.002);
+    //.0033
+    private PID forwardPID = new PID(.022, 0, 0.0033);
+    private PID strafePID = new PID(.015, 0, 0.003);
+
+    //private PID forwardPID = new PID(.0152, 0, 0);
+    //private PID strafePID = new PID(.015, 0, 0);
 
     @Override
     //Main method which runs when you click AutoMain on the phone
@@ -87,7 +100,6 @@ public class AutoMain extends LinearOpMode {
         turn(-30);snapBot();pause(500);
         turn(120);snapBot();pause(500);
         turn(-120);snapBot();pause(500);//test degrees close to 180, as 180 doesnt work with snap
-
         */
 
 
@@ -95,10 +107,11 @@ public class AutoMain extends LinearOpMode {
         if(scenario == 0) //zone A
         {
 
-            moveBot(FORWARD, 56, .85, true); pause(250);//forward
-            moveBot(RIGHT, 37, .85, true);pause(250);
-            snapBot();
-            powerShot();
+            moveBot(FORWARD, 56, .85, "straight"); //forward
+            // moveBot(RIGHT, 37, .85, "straferight");
+
+            //snapBot();
+            //powerShot();
 //            updateY(18);
 //            turn(-90);
 //            //x += -16;
@@ -110,22 +123,22 @@ public class AutoMain extends LinearOpMode {
         }
         if(scenario == 1) { //zone B
             firstShot();
-            moveBot(FORWARD, 20, .75, true); //forward
+            moveBot(FORWARD, 20, .75, "forward"); //forward
             updateY(20);
-            moveBot(RIGHT,18, .75, true); //strafe right
+            moveBot(RIGHT,18, .75, "straferight"); //strafe right
             updateX(18);
             armTravel();
             updateTelemetry();
         }
         if(scenario == 4){ //zone C
             firstShot();
-            moveBot(LEFT,11, .6, true); //strafe left
+            moveBot(LEFT,11, .6, "strafeleft"); //strafe left
             updateX(-11);
-            moveBot(TURNRIGHT,1,.6,true);
-            moveBot(FORWARD, 51, .6, true); //forward
+            moveBot(TURNRIGHT,1,.6,"none");
+            moveBot(FORWARD, 51, .6, "forward"); //forward
             updateY(51);
             armTravel();
-            moveBot(BACKWARD, 39, .6, true); //backward
+            moveBot(BACKWARD, 39, .6, "forward"); //backward
             updateY(-39);
             updateTelemetry();
         }
@@ -136,24 +149,19 @@ public class AutoMain extends LinearOpMode {
 
         claw.setPosition(1);
 
-        snapBot();
+        // snapBot();
 
         //0 Void 1 Forward 2 Reverse
 
 
     }
 
-    //Returns the current angle of the robot calculated by the IMU
-    public double currentAngle() throws InterruptedException{
-        angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
-        return angles.firstAngle;
-    }
 
     public void firstShot() throws InterruptedException{
-        moveBot(FORWARD,60, .75, true); //forward
+        moveBot(FORWARD,60, .75, "forward"); //forward
         updateY(60); //Updates Y coordinate of the robot as it moved forward 58
         pause(700); //The robot needs to have a pause of certain seconds so it doesnt jerk
-        moveBot(RIGHT,14, .75, true); //strafe right
+        moveBot(RIGHT,14, .75, "straferight"); //strafe right
 
         //Update X by 34 as it moved right 34
         updateX(34);
@@ -181,6 +189,7 @@ public class AutoMain extends LinearOpMode {
             if(((int) currentAngle() > -1) && ((int) currentAngle() < 1))
                 break;
         }
+
     }
 
     //This will only be used for Zone C where the Robot can intake and shoot more rings
@@ -193,9 +202,9 @@ public class AutoMain extends LinearOpMode {
         int targetY = getY();
 
 
-        moveBot(RIGHT, deltaX, .75, true); //right
+        moveBot(RIGHT, deltaX, .75, "straferight"); //right
 
-        moveBot(BACKWARD, deltaY, .5, true); //backward
+        moveBot(BACKWARD, deltaY, .5, "forward"); //backward
 
         updateY(deltaY);
         // moveBot(1, 2, 2, 1, deltaX, .6, true); //right
@@ -204,17 +213,17 @@ public class AutoMain extends LinearOpMode {
 
         backZero(2250);
 
-        moveBot(RIGHT, targetX-getX(), .75, true);
+        moveBot(RIGHT, targetX-getX(), .75, "straferight");
         updateX(targetX-getX());
         int save = targetX-getX();
 
         yeetRing(-.71);
 
 
-        moveBot(LEFT, -save, .75, true); //right
+        moveBot(LEFT, -save, .75, "strafeleft"); //right
         updateX(save);
         intake(.2);
-        moveBot(RIGHT, save, .75, true);
+        moveBot(RIGHT, save, .75, "straferight");
         yeetRing(-.73);
 
 
@@ -244,20 +253,19 @@ public class AutoMain extends LinearOpMode {
         pause(100);
         int deltaX = getX();
         int deltaY = getY() - 5;
-
+        String moveType = "";
 
         claw.setPosition(0);
 
         //snapBot();
-        moveBot(LEFT, 11, .3, true);
+        moveBot(LEFT, 11, .3, moveType);
         pause(100);
 
-        moveBot(FORWARD, deltaY-25, .3, true);
+        moveBot(FORWARD, deltaY-25, .3, moveType);
 
 
 
         /*ElapsedTime wobbler = new ElapsedTime();
-
        arm.setTargetPosition(-2268);
         arm.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         arm.setPower(-.9);
@@ -315,6 +323,7 @@ public class AutoMain extends LinearOpMode {
         phoneCam.setPipeline(pipeline);
         claw.setPosition(1);
         flicker.setPosition(.7);
+        storage = new ArrayList<Double[]> ();
 
         BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
         parameters.angleUnit = BNO055IMU.AngleUnit.DEGREES;
@@ -365,6 +374,12 @@ public class AutoMain extends LinearOpMode {
         waitForStart();
     }
 
+    public void halt () {
+        for (DcMotorEx motor : motors) {
+            motor.setPower(0);
+        }
+    }
+
     /**
      * @param power
      * @param distance inches so you will have to convert to tics
@@ -381,11 +396,12 @@ public class AutoMain extends LinearOpMode {
     //0 = Void Wheel
     //1 = Set the motor to FORWARD
     //2 = Set the motor to REVERSE
-    public void moveBot(int[] dir, int distance, double power, boolean withIntake) throws InterruptedException {
-        //moveBot(1, 1, 2, 2, -24, .60, true); //Forwward
+    public void moveBot(int[] dir, int distance, double power, String moveType) throws InterruptedException {
+        //moveBot(1, 1, 2, 2, -24, .60, true); //Forward
         //turnBot(2, 2, 1, 1, -24, .60); //Backward
         //turnBot(2, 1, 2, 1, 30, .60); //Strafe right
         //turnBot(1, 2, 1, 2, 0, .6) /Strafe left
+
         int leftT = dir[0];
         int rightT = dir[1];
         int leftB = dir[2];
@@ -412,7 +428,7 @@ public class AutoMain extends LinearOpMode {
 
         if (rightB == 2) {
             rightBack.setDirection(DcMotor.Direction.FORWARD);
-        } else if (rightT == 1) {
+        } else if (rightB == 1) {
             rightBack.setDirection(DcMotor.Direction.REVERSE);
         }
 
@@ -426,11 +442,57 @@ public class AutoMain extends LinearOpMode {
             motor.setPower(power);
             motor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         }
+
         //This is what checks if the motors are supposed to be still running.
-        while (leftFront.isBusy() && rightFront.isBusy() && leftBack.isBusy() && rightBack.isBusy()) {
-            heartbeat();
+        while (leftFront.isBusy() && leftBack.isBusy() && rightFront.isBusy() && rightBack.isBusy()) {
+            //heartbeat();
+            angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+            correction(power, 0, moveType);
 
         }
+
+        print();
+    }
+
+    public void lowestFactor() throws InterruptedException{
+        double smallestAngle = Math.abs(storage.get(0)[4]);
+        int j = 0;
+
+        for(int i = 1; i < storage.size(); i++){
+            if(smallestAngle > Math.abs(storage.get(i)[4])){
+                smallestAngle = Math.abs(storage.get(i)[4]);
+                j = i;
+            }
+        }
+
+        double save1 = leftFront.getPower();
+        double save2 = leftBack.getPower();
+        double save3 = rightFront.getPower();
+        double save4 = rightBack.getPower();
+
+
+        leftFront.setPower(storage.get(j)[0]);
+        leftBack.setPower(storage.get(j)[1]);
+        rightFront.setPower(storage.get(j)[2]);
+        rightBack.setPower(storage.get(j)[3]);
+
+        ElapsedTime hi = new ElapsedTime();
+
+        while(hi.milliseconds() <= 6000){
+
+            telemetry.addData("Target Angle", storage.get(j)[4]);
+            telemetry.addData("power BR", save4);
+            telemetry.addData("power BL", save2);
+            telemetry.addData("power FR", save3);
+            telemetry.addData("power FL", save1);
+
+            telemetry.addData("power BR", rightBack.getPower());
+            telemetry.addData("power BL", leftBack.getPower());
+            telemetry.addData("power FR", rightFront.getPower());
+            telemetry.addData("power FL", leftFront.getPower());
+            telemetry.update();
+        }
+
 
     }
 
@@ -444,6 +506,101 @@ public class AutoMain extends LinearOpMode {
         }
     }
 
+    //Returns the current angle of the robot calculated by the IMU
+    public double currentAngle() throws InterruptedException{
+        angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+        return angles.firstAngle;
+    }
+
+    public void correction (double power, double targetHeading, String movementType) throws InterruptedException
+    {
+        //sets target and current angles
+
+
+        double target = targetHeading;
+        double current = currentAngle();
+
+        if(Math.abs(current - target) < 5)
+            return;
+
+
+        telemetry.addData("Velocity ",rightBack.getVelocity());
+        telemetry.update();
+
+        Double[] calledArray = new Double[5];
+
+        //when axis between -179 and 179 degrees is crossed, degrees must be converted from 0 - 360 degrees. 179-(-179) = 358. 179 - 181 = -2. Big difference
+        if (targetHeading < -135 && currentAngle() > 135) {
+            target = targetHeading + 360.0;
+        } else if (targetHeading > 135 && currentAngle() < -135) {
+            current = currentAngle() + 360.0;
+        }
+
+        if (target > 180) {
+            target -= 360;
+        } else if (target < -180) {
+            target += 360;
+        }
+
+
+        //PD correction for both regular and spline motion
+        if (movementType.contains("straight") || movementType.contains("spline")) {
+            leftFront.setPower(-Range.clip(power + forwardPID.getCorrection(target - current, runtime), -1.0, 1.0));
+            rightFront.setPower(Range.clip(power - forwardPID.getCorrection(target - current, runtime), -1.0, 1.0));
+            leftBack.setPower(-Range.clip(power + forwardPID.getCorrection(target - current, runtime), -1.0, 1.0));
+            rightBack.setPower(Range.clip(power - forwardPID.getCorrection(target - current, runtime), -1.0, 1.0));
+
+            calledArray[0] = Range.clip(power + forwardPID.getCorrection(target - current, runtime), -1.0, 1.0);
+            calledArray[1] = Range.clip(power - forwardPID.getCorrection(target - current, runtime), -1.0, 1.0);
+            calledArray[2] = Range.clip(power + forwardPID.getCorrection(target - current, runtime), -1.0, 1.0);
+            calledArray[3] = Range.clip(power - forwardPID.getCorrection(target - current, runtime), -1.0, 1.0);
+            calledArray[4] = currentAngle() - target;
+
+            storage.add(calledArray);
+
+        }
+
+        //pd correction for strafe motion. Right and left are opposites
+        else if (movementType.contains("strafe")) {
+            if (movementType.contains("left")) {
+                leftFront.setPower(Range.clip(-power + strafePID.getCorrection(target - current, runtime), -1.0, 1.0));
+                rightFront.setPower(Range.clip(power - strafePID.getCorrection(target - current, runtime), -1.0, 1.0));
+                leftBack.setPower(Range.clip(power + strafePID.getCorrection(target - current, runtime), -1.0, 1.0));
+                rightBack.setPower(Range.clip(-power - strafePID.getCorrection(target - current, runtime), -1.0, 1.0));
+            } else if (movementType.contains("right")) {
+                leftFront.setPower(Range.clip(power + strafePID.getCorrection(target - current, runtime), -1.0, 1.0));
+                rightFront.setPower(Range.clip(-power - strafePID.getCorrection(target - current, runtime), -1.0, 1.0));
+                leftBack.setPower(Range.clip(-power + strafePID.getCorrection(target - current, runtime), -1.0, 1.0));
+                rightBack.setPower(Range.clip(power - strafePID.getCorrection(target - current, runtime), -1.0, 1.0));
+            }
+        }
+
+        telemetry.addData("correction",forwardPID.getCorrection(target-current,runtime));
+        telemetry.addData("angle", current);
+        telemetry.addData("target", target);
+        telemetry.addData("error", current - target);
+        telemetry.addData("power BR", rightBack.getPower());
+        telemetry.addData("power BL", leftBack.getPower());
+        telemetry.addData("power FR", rightFront.getPower());
+        telemetry.addData("power FL", leftFront.getPower());
+        telemetry.update();
+
+
+    }
+
+    public void print() throws InterruptedException{
+        ElapsedTime aman = new ElapsedTime();
+
+        ArrayList<Double> errors = forwardPID.aman();
+
+        for(int i = 0; i < errors.size(); i++){
+            telemetry.addData("Error " + i, errors.get(i));
+        }
+        telemetry.update();
+        pause(10000);
+
+    }
+
     public void powerShot() throws InterruptedException {
         double pow = -.63;
         shooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
@@ -454,12 +611,14 @@ public class AutoMain extends LinearOpMode {
         double initialDistance = 60;
         double powerIncrement = 0.04;
         ElapsedTime wait = new ElapsedTime();
-
+        pause(200);
         while (wait.milliseconds() <= 1000) {
         }
         yeetLessRing(pow);
+        pause(50);
         turn(Math.toDegrees(Math.atan2(7.5, initialDistance)));
         yeetLessRing(pow-powerIncrement);
+        pause(50);
         turn(Math.toDegrees(Math.atan2(15,initialDistance))-Math.toDegrees(Math.atan2(7.5,initialDistance)));
         yeetLessRing(pow-(2*powerIncrement));
         shooter.setPower(0);
@@ -529,6 +688,16 @@ public class AutoMain extends LinearOpMode {
         }
     }
 
+
+
+    public void resetMotors() {
+        for (DcMotorEx motor : motors) {
+            motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+        }
+    }
+
     public void heartbeat() throws InterruptedException {
         //if opMode is stopped, will throw and catch an InterruptedException rather than resulting in red text and program crash on phone
         if (!opModeIsActive()) {
@@ -561,6 +730,8 @@ public class AutoMain extends LinearOpMode {
         arm.setPower(0);
 
     }
+
+
 
     public void turn(double turnAmount) throws InterruptedException {//right is negative sdlijhfkjdhfjklashdflkasdhjklfahsdjklfhasjkldfhlasjdkhfjkasfdhlk
         leftFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -676,7 +847,7 @@ public class AutoMain extends LinearOpMode {
         static final int REGION_HEIGHT = 25;
 
         final int FOUR_RING_THRESHOLD = 150;
-        final int ONE_RING_THRESHOLD = 137;
+        final int ONE_RING_THRESHOLD = 138;
 
         Point region1_pointA = new Point(
                 REGION1_TOPLEFT_ANCHOR_POINT.x,

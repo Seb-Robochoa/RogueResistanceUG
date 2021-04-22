@@ -12,11 +12,29 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
+import com.qualcomm.robotcore.hardware.ColorSensor;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
+
+
+import org.opencv.core.Core;
+import org.opencv.core.Mat;
+import org.opencv.core.Point;
+import org.opencv.core.Rect;
+import org.opencv.core.Scalar;
+import org.opencv.imgproc.Imgproc;
+import org.openftc.easyopencv.OpenCvCamera;
+import org.openftc.easyopencv.OpenCvCameraFactory;
+import org.openftc.easyopencv.OpenCvCameraRotation;
+import org.openftc.easyopencv.OpenCvInternalCamera;
+import org.openftc.easyopencv.OpenCvPipeline;
+import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 
 //test lol Test
 //for jon in jon on jon
@@ -24,6 +42,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 public class TeleOP extends OpMode {
     private DcMotorEx leftFront, leftBack, rightFront, rightBack, arm, shooter, intake, transfer;
     private boolean direction, togglePrecision;
+    private ColorSensor color_sensor;
     private double factor;
     boolean currentB = false;
     boolean driveOne = false;
@@ -35,11 +54,20 @@ public class TeleOP extends OpMode {
     double armPos = 0;
     private Servo claw, flicker, holder, cheese; //claw, flicker, holder
     boolean reverse;
+    OpenCvInternalCamera phoneCam;
+    TeleOP.Autoaim pipeline;
+    private PID forwardPID = new PID(.022, 0, 0.0033);
+    private final int WHEEL_RADIUS = 4;
+    private final double GEAR_RATIO = (double)5/6;
+    private final double TICKS_PER_REVOLUTION = 537.6;
+    private final double TPI = TICKS_PER_REVOLUTION/(2*Math.PI*GEAR_RATIO*WHEEL_RADIUS);
+    private PID strafePID = new PID(.015, 0, 0.003);
+
     int reverseFactor;
     private BNO055IMU imu;
     private ElapsedTime runtime;
     private double servo;
-    double shooterPower = .69;
+    double shooterPower = .71;
     int balls = 2;
     boolean shotMode = false;
     boolean clawReady = false;
@@ -74,6 +102,7 @@ public class TeleOP extends OpMode {
         flicker = hardwareMap.servo.get("flicker");
         holder = hardwareMap.servo.get("holder");
         cheese = hardwareMap.servo.get("cheese");
+        color_sensor = hardwareMap.colorSensor.get("colorSensor");
         //Initialize all the hardware to use Encoders
         leftFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         leftBack.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
@@ -106,6 +135,14 @@ public class TeleOP extends OpMode {
         runtime = new ElapsedTime();
         reverse = false;
 
+        int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
+        phoneCam = OpenCvCameraFactory.getInstance().createInternalCamera(OpenCvInternalCamera.CameraDirection.BACK, cameraMonitorViewId);
+        pipeline = new TeleOP.Autoaim();
+        phoneCam.setPipeline(pipeline);
+        phoneCam.openCameraDeviceAsync(() -> {
+            phoneCam.startStreaming(320, 240, OpenCvCameraRotation.SIDEWAYS_LEFT);
+        });
+
         angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
         initialAngle=angles.firstAngle;
         cheese.setPosition(.46);
@@ -130,10 +167,10 @@ public class TeleOP extends OpMode {
             double stickAngle = Math.atan2(direction ? -gamepad1.left_stick_y : gamepad1.left_stick_y, direction ? gamepad1.left_stick_x : -gamepad1.left_stick_x); // desired robot angle from the angle of stick
             double powerAngle = stickAngle - (Math.PI / 4); // conversion for correct power values
             double rightX = gamepad1.right_stick_x; // right stick x axis controls turning
-            final double leftFrontPower = Range.clip(x * Math.cos(powerAngle) + rightX, -1.0, 1.0);
-            final double leftRearPower = Range.clip(x * Math.sin(powerAngle) + rightX, -1.0, 1.0);
-            final double rightFrontPower = Range.clip(x * Math.sin(powerAngle) - rightX, -1.0, 1.0);
-            final double rightRearPower = Range.clip(x * Math.cos(powerAngle) - rightX, -1.0, 1.0);
+            final double leftFrontPower = Range.clip(x * Math.cos(powerAngle) + rightX, -.80, .80);
+            final double leftRearPower = Range.clip(x * Math.sin(powerAngle) + rightX, -.80, .80);
+            final double rightFrontPower = Range.clip(x * Math.sin(powerAngle) - rightX, -.80, .80);
+            final double rightRearPower = Range.clip(x * Math.cos(powerAngle) - rightX, -.80, .80);
 
 
             //Set the position of arm to counter clockwise/clockwise
@@ -162,7 +199,7 @@ public class TeleOP extends OpMode {
      transfer.setPower(power); */
 
 
-
+        //autoaim();
         //Reset the intake and transfer encoders
         precisionMode(); //check for precision mode
         singlePlayer(); //check to see if player one takes over
@@ -179,6 +216,8 @@ public class TeleOP extends OpMode {
         //speak();
 
 
+        telemetry.addData("Analysis", pipeline.getAnalysis());
+        telemetry.update();
         telemetry.addData("Power shot mode:", getShotMode());
         telemetry.addData("One driver: ", getDrive());
         telemetry.addData("RB",gamepad1.right_bumper);
@@ -186,30 +225,178 @@ public class TeleOP extends OpMode {
         telemetry.addData("angle",angles.firstAngle);
         telemetry.update();
 
+
         CheeseWas = CheeseIs;
         //}
+    }
+
+    public void autoaim(){
+        snapBot();
+        boolean move = true;
+        color_sensor.enableLed(true);  // Turn the LED on
+        while(color_sensor.alpha() < 20){
+            moveByWheelEncoders(0, 1, .4, "straight", move);
+            move = false;
+            telemetry.addData("Alpha", color_sensor.alpha());
+            telemetry.update();
+        }
+        color_sensor.enableLed(false); // Turn the LED off
+
     }
 
 
     public void rocketFart()
     {
+
+
         flick.reset();
-        int breathe = 250;
-        boolean shoot = true;
-        if(gamepad1.b)
-            while(flick.milliseconds() <= 1500)
-            {
-                if(flick.milliseconds() % breathe == 0)
-                    shoot = true;
-                else if(flick.milliseconds() % breathe == 50)
-                    shoot = false;
-                if (shoot)
+        if(gamepad1.b) {
+            shooter.setPower(-.77);
+            while (flick.milliseconds() <= 1000) {
+                if (flick.milliseconds() > 0 && flick.milliseconds() < 170)
                     flicker.setPosition(.35);
-                else if(!shoot)
+                if (flick.milliseconds() > 200 && flick.milliseconds() < 370) {
+                    shooter.setPower(-.75);
                     flicker.setPosition(.64);
+                }
+                if (flick.milliseconds() > 400 && flick.milliseconds() < 570)
+                    flicker.setPosition(.35);
+                if (flick.milliseconds() > 600 && flick.milliseconds() < 770) {
+                    shooter.setPower(-.70);
+                    flicker.setPosition(.64);
+                }
+                if (flick.milliseconds() > 800 && flick.milliseconds() < 970)
+                    flicker.setPosition(.35);
             }
+            flicker.setPosition(.64);
+        }
 
     }
+
+    public void moveByWheelEncoders(double targetHeading, double inches, double power, String movementType, boolean move)  {
+        if(move)
+            resetMotors();
+
+        double currentPosition = leftBack.getCurrentPosition();
+
+        int ticks = (int)(inches * TPI);
+
+        while (motorsBusy(ticks, currentPosition)) {
+            correction(-power, targetHeading, movementType, false, 1);
+        }
+
+        // halt();
+    }
+    public void strafeByWheelEncoders(double targetHeading, double inches, double power, String movementType)  {
+        resetMotors();
+
+        double currentPosition = leftBack.getCurrentPosition();
+
+        int ticks = (int)(inches * TPI * 1.2);
+
+        while (motorsBusy(ticks, currentPosition)) {
+            correction(-power, targetHeading, movementType, false, 1);
+        }
+
+        halt();
+    }
+
+    public boolean motorsBusy(int ticks, double startingPosition) {
+        return Math.abs(leftBack.getCurrentPosition() - startingPosition) < ticks && Math.abs(rightBack.getCurrentPosition() - startingPosition) < ticks && Math.abs(leftFront.getCurrentPosition() - startingPosition) < ticks && Math.abs(rightFront.getCurrentPosition() - startingPosition) < ticks;
+    }
+
+    public double currentAngle() {
+        angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+        return angles.firstAngle;
+    }
+
+    public void correction(double power, double targetHeading, String movementType, boolean inverted, double max) {
+        //sets target and current angles
+        double target = targetHeading;
+        double current = currentAngle();
+
+        //if the spline motion is backwards, the target must be flipped 180 degrees in order to match with spline.getAngle()
+        if (inverted && movementType.contains("spline")) {
+            target = (targetHeading > 0) ? (targetHeading - 180) : (targetHeading + 180);
+        }
+
+        //when axis between -179 and 179 degrees is crossed, degrees must be converted from 0 - 360 degrees. 179-(-179) = 358. 179 - 181 = -2. Big difference
+        double error = getError(current, target);
+
+        //PD correction for both regular and spline motion
+        if (movementType.contains("straight") || movementType.contains("spline")) {
+            double correction = forwardPID.getCorrection(error, runtime);
+
+            double leftPower = Range.clip(power - correction, -max, max);
+            double rightPower = Range.clip(power + correction, -max, max);
+            double nearing = 0;
+
+            leftFront.setPower(leftPower);
+            rightFront.setPower(rightPower);
+            leftBack.setPower(leftPower);
+            rightBack.setPower(rightPower);
+//            telemetry.addData("left expected power", leftPower);
+//            telemetry.addData("right expected power", rightPower);
+//            telemetry.addData("actual left power", leftFront.getPower());
+//            telemetry.addData("actual right power", rightFront.getPower());
+        }
+
+        //pd correction for strafe motion. Right and left are opposites
+
+        else if (movementType.contains("strafe")) {
+            double correction = strafePID.getCorrection(error, runtime);
+
+            if (movementType.contains("left")) {
+                leftFront.setPower(Range.clip(-power - correction, -1.0, 1.0));
+                rightFront.setPower(Range.clip(power + correction, -1.0, 1.0));
+                leftBack.setPower(Range.clip(power - correction, -1.0, 1.0));
+                rightBack.setPower(Range.clip(-power + correction, -1.0, 1.0));
+            } else if (movementType.contains("right")) {
+                leftFront.setPower(Range.clip(power - correction, -1.0, 1.0));
+                rightFront.setPower(Range.clip(-power + correction, -1.0, 1.0));
+                leftBack.setPower(Range.clip(-power - correction, -1.0, 1.0));
+                rightBack.setPower(Range.clip(power + correction, -1.0, 1.0));
+            }
+        }
+
+    }
+
+    public void halt () {
+        leftFront.setPower(0);
+        leftBack.setPower(0);
+        rightFront.setPower(0);
+        rightBack.setPower(0);
+    }
+
+    public double getError(double current, double target) {
+        double error;
+
+        double error1 = /*current - target*/ target - current;
+        double error2;
+        if (current < 0)
+            error2 = /*(current + 360) - (target);*/ target - (current + 360);
+        else
+            error2 = /*(current - 360) - (target);*/ target - (current - 360);
+        if (Math.abs(error1) <= Math.abs(error2))
+            error = error1;
+        else
+            error = error2;
+
+        return error;
+    }
+
+
+    public void resetMotors(){
+        DcMotorEx[] motors = new DcMotorEx[]{leftFront, rightFront, leftBack, rightBack};
+
+        for (DcMotorEx motor : motors) {
+            motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+
+        }
+    }
+
     public void revShoot() { // controls the flywheel WORKS
         if (gamepad1.right_trigger > .499999) {
             shooter.setPower(-shooterPower);
@@ -424,6 +611,8 @@ public class TeleOP extends OpMode {
         }
     }
 
+
+
     public void armTravel() { // controls arm WORKS
         if(driveOne) {
 
@@ -625,5 +814,80 @@ public class TeleOP extends OpMode {
     {
         return driveOne;
     }
+
+
+    public static class Autoaim extends OpenCvPipeline {
+
+
+
+        static final Scalar BLUE = new Scalar(0, 0, 255);
+        static final Scalar GREEN = new Scalar(0, 255, 0);
+
+        static final Point REGION1_TOPLEFT_ANCHOR_POINT = new Point(115, 115);
+
+        static final int REGION_WIDTH = 5;
+        static final int REGION_HEIGHT = 25;
+
+
+        Point region1_pointA = new Point(
+                REGION1_TOPLEFT_ANCHOR_POINT.x,
+                REGION1_TOPLEFT_ANCHOR_POINT.y);
+
+        Point region1_pointB = new Point(
+                REGION1_TOPLEFT_ANCHOR_POINT.x + REGION_WIDTH,
+                REGION1_TOPLEFT_ANCHOR_POINT.y + REGION_HEIGHT);
+
+        Mat region1_Cb;
+        Mat YCrCb = new Mat();
+        Mat Cb = new Mat();
+        int avg1;
+
+
+        void inputToCb(Mat input){
+            Imgproc.cvtColor(input, YCrCb, Imgproc.COLOR_RGB2YCrCb);
+            Core.extractChannel(YCrCb, Cb, 0);
+        }
+
+        @Override
+        public void init(Mat firstFrame){
+            inputToCb(firstFrame);
+
+            region1_Cb = Cb.submat(new Rect(region1_pointA, region1_pointB));
+
+        }
+
+        @Override
+        public Mat processFrame(Mat input) {
+            inputToCb(input);
+
+            avg1 = (int) Core.mean(region1_Cb).val[0];
+
+            Imgproc.rectangle(
+                    input,
+                    region1_pointA,
+                    region1_pointB,
+                    BLUE,
+                    2);
+
+
+
+            Imgproc.rectangle(
+                    input,
+                    region1_pointA,
+                    region1_pointB,
+                    GREEN,
+                    -1);
+
+            return input;
+        }
+
+        public int getAnalysis() {
+            return avg1;
+        }
+
+
+
+    }
+
 
 }

@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
+import android.util.Log;
+
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -52,7 +54,12 @@ public class AutoMain extends LinearOpMode {
     private DcMotorEx leftFront, rightFront, leftBack, rightBack, arm, transfer, intake, shooter;
     private Servo claw, flicker, holder;
     private DcMotorEx[] motors;
-    private final double TPI = 33.5625;
+
+    private final int WHEEL_RADIUS = 4;
+    private final double GEAR_RATIO = (double) 5 / 6;
+    private final double TICKS_PER_REVOLUTION = 537.6;
+
+    private final double TPI = TICKS_PER_REVOLUTION / (2 * Math.PI * GEAR_RATIO * WHEEL_RADIUS);
     private int scenario;
     private ElapsedTime runtime;
     OpenCvInternalCamera phoneCam;
@@ -68,7 +75,7 @@ public class AutoMain extends LinearOpMode {
     double forwardAngles;
     double turnKp;
     private double initialAngle;
-    private ArrayList<Double []> storage;
+    private ArrayList<Double[]> storage;
 
 
     //PID stuff
@@ -76,7 +83,7 @@ public class AutoMain extends LinearOpMode {
     // private PID strafePID = new PID(.02, .0003, 0.002);
     //.0033
     private PID forwardPID = new PID(.022, 0, 0.0033);
-    private PID strafePID = new PID(.015, 0, 0.003);
+    private PID strafePID = new PID(.024, 0, 0.0033);
 
     //private PID forwardPID = new PID(.0152, 0, 0);
     //private PID strafePID = new PID(.015, 0, 0);
@@ -102,133 +109,185 @@ public class AutoMain extends LinearOpMode {
         turn(-120);snapBot();pause(500);//test degrees close to 180, as 180 doesnt work with snap
         */
 
-
         //If there are only 0 rings detected by the robot
-        if(scenario == 0) //zone A
-        {
+        shooter.setPower(-.76);
+        setWobbler(scenario);
 
-            //moveBot(FORWARD, 56, .25, "straight"); //forward
-            //moveByWheelEncoders(0, 48, .4, "straight");
-            strafeByWheelEncoders(-90, 48, .4, "strafe right");
-            // moveBot(RIGHT, 37, .85, "straferight");
 
-            //snapBot();
-            //powerShot();
-//            updateY(18);
-//            turn(-90);
-//            //x += -16;
-//            armTravel();
-//            //turn(90);
-//            //moveBot(BACKWARD, 15, .75, true);
-//            //secondWobbler();
-//            updateTelemetry();
-        }
-        if(scenario == 1) { //zone B
-            firstShot();
-            moveBot(FORWARD, 20, .75, "forward"); //forward
-            updateY(20);
-            moveBot(RIGHT,18, .75, "straferight"); //strafe right
-            updateX(18);
-            armTravel();
-            updateTelemetry();
-        }
-        if(scenario == 4){ //zone C
-            firstShot();
-            moveBot(LEFT,11, .6, "strafeleft"); //strafe left
-            updateX(-11);
-            moveBot(TURNRIGHT,1,.6,"none");
-            moveBot(FORWARD, 51, .6, "forward"); //forward
-            updateY(51);
-            armTravel();
-            moveBot(BACKWARD, 39, .6, "forward"); //backward
-            updateY(-39);
-            updateTelemetry();
-        }
-
+        //powerShot();
+        snapBot();
 
         updateTelemetry();
 
+        //strafeByWheelEncoders(0, 7, .6, "strafe left"); pause(750);
 
-        claw.setPosition(1);
-
-        // snapBot();
 
         //0 Void 1 Forward 2 Reverse
 
 
     }
 
+    public void setWobbler(int scenario) throws InterruptedException {
 
-    public void firstShot() throws InterruptedException{
-        moveBot(FORWARD,60, .75, "forward"); //forward
-        updateY(60); //Updates Y coordinate of the robot as it moved forward 58
-        pause(700); //The robot needs to have a pause of certain seconds so it doesnt jerk
-        moveBot(RIGHT,14, .75, "straferight"); //strafe right
+        if (scenario == 0) //zone A
+        {
 
-        //Update X by 34 as it moved right 34
-        updateX(34);
-        holder.setPosition(0);
+            //moveBot(FORWARD, 56, .25, "straight"); //forward\
 
-        //BackZero is a function that turns the robot's angle to 0.
-        // This will be eventually replaced by SnapBot (Kwan's method of turning the bot back to zero, which is more efficient)
-        backZero(2250);
-        //Shoots rings at a power -0.71
-        yeetRing(-.64);
+            moveByWheelEncoders(0, 80, .7, "straight");
+            holder.setPosition(0);
+            turn(-15);
+            armTravel();
+            turn(15);
+            moveByWheelEncoders(0, 8, -.7, "straight");pause(500);snapBot();
+            strafeByWheelEncoders(0, 10, .4, "strafe right");
+
+            snapBot();
+
+            yeetRing(-.64);
+
+            strafeByWheelEncoders(0, 9, .6, "strafe right"); //22 of powershot
+            // moveBot(RIGHT, 37, .85, "straferight");
+
+            secondWobbler(42, 28, 40,"left");
+
+            strafeByWheelEncoders(0, 25, 1, "strafe right");
+            moveByWheelEncoders(0, 10, .7, "straight");
+            snapBot();
+
+
+        }
+        if (scenario == 1) { //zone B//sdkjfghdfsugudrthv8suitjyukewhy7rehgjgytraysufewezfesiutsjgr67jyetym
+            moveByWheelEncoders(0, 1, .7, "straight");
+            strafeByWheelEncoders(0, 4, .4, "strafe left");pause(250); snapBot();
+            moveByWheelEncoders(0, 70, .7, "straight"); pause(500); snapBot();
+            strafeByWheelEncoders(0, 17, .4, "strafe right");
+            snapBot();
+
+            //armTravel();
+            yeetRing(-.64);
+            holder.setPosition(0);
+            moveByWheelEncoders(0, 26, .7, "straight");
+            turn(10);
+            armTravel();
+            turn(-10);
+            shooter.setPower(-.71);
+
+
+            moveByWheelEncoders(0,36,-.7,"straight");
+
+            snapBot();
+
+            strafeByWheelEncoders(0, 2, .5, "strafe left");
+            loadMoreRings(false,-.75,false);
+
+            strafeByWheelEncoders(0, 8, 1, "strafe right"); //22 of powershot
+            snapBot();
+            secondWobbler(24, 12, 70,"right");
+            moveByWheelEncoders(0,20,-1,"straight");
+
+
+
+
+            // moveByWheelEncoders(0,-6,.4,"straight");
+
+            //strafeByWheelEncoders(0, 32.5, .4, "strafe right");
+
+        }
+        if (scenario == 4) { //zone C
+            moveByWheelEncoders(0, 1, .7, "straight");pause(100);snapBot();
+            strafeByWheelEncoders(0, 4, .4, "strafe left");pause(150);snapBot();
+            moveByWheelEncoders(0, 70, .7, "straight");pause(150);snapBot();
+            strafeByWheelEncoders(0, 14, .3, "strafe right");
+
+
+            holder.setPosition(0);
+            snapBot();
+            //armTravel();
+            yeetRing(-.64);
+
+            strafeByWheelEncoders(0, 4, .5, "strafe right");
+
+            moveByWheelEncoders(0, 13, -1, "straight");
+            //moveByWheelEncoders(0, 2, .4, "straight");
+            snapBot();
+
+            moveByWheelEncoders(0, 2, 1, "straight");
+            shooter.setPower(-.67);
+
+            loadMoreRings(true, -.63,false);
+
+            shooter.setPower(-.75);
+
+            snapBot();
+            loadMoreRings(false, -.72, true);
+
+            strafeByWheelEncoders(0, 20, 1, "strafe left");
+            snapBot();
+
+            moveByWheelEncoders(0, 92, 1, "straight");
+
+            armTravel();
+
+            moveByWheelEncoders(0, 38, -1, "straight");
+        }
+
     }
 
-    public void snapBot() throws InterruptedException{//sdkfhgskhgdfsgklhsdfgljsfgjhfjgjhfgjhfgjhfgjhfgjkhfgjhfgjhfgjhfgjhfgjhfgjhfgjhfgjh
+
+    public void snapBot() throws InterruptedException {//sdkfhgskhgdfsgklhsdfgljsfgjhfjgjhfgjhfgjhfgjhfgjkhfgjhfgjhfgjhfgjhfgjhfgjhfgjhfgjh
         angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
-        turn(Math.abs(initialAngle-angles.firstAngle)*(angles.firstAngle/Math.abs(angles.firstAngle)));
+        turn(Math.abs(initialAngle - angles.firstAngle) * (angles.firstAngle / Math.abs(angles.firstAngle)));
     }
 
     //Sets the robot angle back to zero
-    public void backZero(int time) throws InterruptedException{
+    public void backZero(int time) throws InterruptedException {
         ElapsedTime test = new ElapsedTime();
         //The robot tries to turn back to the original angle in 2.5 seconds
-        while(!(((int) currentAngle() > -1) && ((int) currentAngle() < 1)) && test.milliseconds() <= 2250){
+        while (!(((int) currentAngle() > -1) && ((int) currentAngle() < 1)) && test.milliseconds() <= 2250) {
             turn(currentAngle());
 
-            if(((int) currentAngle() > -1) && ((int) currentAngle() < 1))
+            if (((int) currentAngle() > -1) && ((int) currentAngle() < 1))
                 break;
         }
 
     }
 
     //This will only be used for Zone C where the Robot can intake and shoot more rings
-    public void loadMoreRings() throws InterruptedException{
-        int deltaY = getY() - 43;
-        int deltaX = 18 - getX();
-
-        //coordinates for shooting
-        int targetX = getX();
-        int targetY = getY();
+    public void loadMoreRings(boolean zoneC, double pow, boolean adjust) throws InterruptedException {
 
 
-        moveBot(RIGHT, deltaX, .75, "straferight"); //right
-
-        moveBot(BACKWARD, deltaY, .5, "forward"); //backward
-
-        updateY(deltaY);
-        // moveBot(1, 2, 2, 1, deltaX, .6, true); //right
-        updateX(deltaX);
-        intake(.1);
-
-        backZero(2250);
-
-        moveBot(RIGHT, targetX-getX(), .75, "straferight");
-        updateX(targetX-getX());
-        int save = targetX-getX();
-
-        yeetRing(-.71);
+        intake(.6, zoneC);
 
 
-        moveBot(LEFT, -save, .75, "strafeleft"); //right
-        updateX(save);
-        intake(.2);
-        moveBot(RIGHT, save, .75, "straferight");
-        yeetRing(-.73);
+        //moveBot(RIGHT, targetX-getX(), .75, "straferight");
+        //updateX(targetX-getX());
+        //int save = targetX-getX();
+
+        snapBot();
+
+        //moveByWheelEncoders(8,.6,1,"straight");
+
+        //turn(5) ;
+        if(!zoneC){
+            yeetLessRing(pow);
+        }
+        else {
+            if(adjust){
+                moveByWheelEncoders(0,16,.7,"straight");
+            }
+            yeetRing(pow);
+        }
+        //turn(-5);
+
+        // moveByWheelEncoders(0, 35, 1, "forward");
 
 
+        //moveBot(LEFT, -save, .75, "strafeleft"); //right
+        //updateX(save);
+        //intake(.2);
+        //moveBot(RIGHT, save, .75, "straferight");
+        //yeetRing(-.73);
 
 
         //moveBot(1,2,2,1,4, .6, true); //strafe right
@@ -243,38 +302,49 @@ public class AutoMain extends LinearOpMode {
         // moveBot(1,1,1,1,12, .6, true); // forward
         //updateY(60);
         updateTelemetry();
-
-
     }
 
     //Gets the second Wobbler in the game
-    public void secondWobbler() throws InterruptedException {
+    public void secondWobbler(int forward, int targetX, int targetY, String strafeDir) throws InterruptedException {
         // position of the second wobbler is at 24, 5
-        pause(100);
-        turn(180);
-        pause(100);
-        int deltaX = getX();
-        int deltaY = getY() - 5;
-        String moveType = "";
-
-        claw.setPosition(0);
-
-        //snapBot();
-        moveBot(LEFT, 11, .3, moveType);
-        pause(100);
-
-        moveBot(FORWARD, deltaY-25, .3, moveType);
-
-
-
-        /*ElapsedTime wobbler = new ElapsedTime();
-       arm.setTargetPosition(-2268);
         arm.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        arm.setPower(-.9);
+        arm.setTargetPosition(-2500);
+
+        arm.setPower(-1);
         arm.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        pause(1000);
-        claw.setPosition(1); //jo mama deez nutz asked imo
-        */
+
+        turn(180);
+        pause(600);
+
+        moveByWheelEncoders(180, forward, .4, "straight");
+        pause(600);
+
+        ElapsedTime wobbler = new ElapsedTime();
+
+        while (wobbler.milliseconds() <= 2000) {
+            heartbeat();
+            if (arm.getCurrentPosition() > (arm.getTargetPosition() - 50)) {
+                claw.setPosition(1);
+                break;
+            }
+        }
+        pause(250);
+        arm.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        arm.setTargetPosition(2500);
+
+        arm.setPower(1);
+        arm.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        while (arm.getCurrentPosition() < 2450) {
+            heartbeat();
+        }
+        arm.setPower(0);
+
+        snapBot();
+
+        strafeByWheelEncoders(0, targetX, .7, "strafe "+strafeDir);
+        moveByWheelEncoders(0, targetY, .7, "straight");
+
+        armTravel();
 
     }
 
@@ -325,7 +395,7 @@ public class AutoMain extends LinearOpMode {
         phoneCam.setPipeline(pipeline);
         claw.setPosition(1);
         flicker.setPosition(.7);
-        storage = new ArrayList<Double[]> ();
+        storage = new ArrayList<Double[]>();
 
         BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
         parameters.angleUnit = BNO055IMU.AngleUnit.DEGREES;
@@ -346,6 +416,13 @@ public class AutoMain extends LinearOpMode {
         while (!opModeIsActive()) {
             telemetry.addData("Analysis", pipeline.getAnalysis());
             telemetry.addData("Position", pipeline.position);
+            telemetry.addData("TPI", TPI);
+            telemetry.addData("TPR", TICKS_PER_REVOLUTION);
+            telemetry.addData("GR", GEAR_RATIO);
+            telemetry.addData("WR", WHEEL_RADIUS);
+
+
+            //telemetry.addData(leftBack.getTargetPosition)
             updateTelemetry();
             telemetry.update();
             scenario = 1;
@@ -368,6 +445,7 @@ public class AutoMain extends LinearOpMode {
             motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
             motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
             motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+            arm.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
             if (motor == leftFront || motor == leftBack)
                 motor.setDirection(DcMotor.Direction.REVERSE);
             else
@@ -376,7 +454,7 @@ public class AutoMain extends LinearOpMode {
         waitForStart();
     }
 
-    public void halt () {
+    public void halt() {
         for (DcMotorEx motor : motors) {
             motor.setPower(0);
         }
@@ -398,12 +476,11 @@ public class AutoMain extends LinearOpMode {
     //0 = Void Wheel
     //1 = Set the motor to FORWARD
     //2 = Set the motor to REVERSE
-    public void moveBot(int[] dir, int distance, double power, String moveType) throws InterruptedException {
-        //moveBot(1, 1, 2, 2, -24, .60, true); //Forward
+    public void moveBot(int[] dir, int distance, double power, boolean withIntake) throws InterruptedException {
+        //moveBot(1, 1, 2, 2, -24, .60, true); //Forwward
         //turnBot(2, 2, 1, 1, -24, .60); //Backward
         //turnBot(2, 1, 2, 1, 30, .60); //Strafe right
         //turnBot(1, 2, 1, 2, 0, .6) /Strafe left
-
         int leftT = dir[0];
         int rightT = dir[1];
         int leftB = dir[2];
@@ -413,8 +490,6 @@ public class AutoMain extends LinearOpMode {
         } else if (leftT == 2) {
             leftFront.setDirection(DcMotor.Direction.REVERSE);
         }
-
-
 
         if (leftB == 1) {
             leftBack.setDirection(DcMotor.Direction.FORWARD);
@@ -430,39 +505,32 @@ public class AutoMain extends LinearOpMode {
 
         if (rightB == 2) {
             rightBack.setDirection(DcMotor.Direction.FORWARD);
-        } else if (rightB == 1) {
+        } else if (rightT == 1) {
             rightBack.setDirection(DcMotor.Direction.REVERSE);
         }
 
+        /*if(withIntake) {
+            while (shooterTime.milliseconds() <= 5000) {
+                intake.setPower(.5);
+                transfer.setPower(1);
+                heartbeat();
+            }
+        }*/
 
         //Moves the robot
         int travel = (int) (distance * TPI);
-
         for (DcMotorEx motor : motors) {
-
+            motor.setTargetPosition(travel);
             motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-            motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-
+            motor.setPower(power);
+            motor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         }
-
         //This is what checks if the motors are supposed to be still running.
-        while (leftFront.getCurrentPosition() < travel  && leftBack.getCurrentPosition() < travel && rightFront.getCurrentPosition() < travel && rightBack.getCurrentPosition() < travel) {
-            //heartbeat();
-            angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
-            correction(power, 0, moveType, false, .4);
-            opModeIsActive();
-
-
+        while (leftFront.isBusy() && rightFront.isBusy() && leftBack.isBusy() && rightBack.isBusy()) {
+            heartbeat();
         }
-        for (DcMotorEx motor : motors) {
-            motor.setPower(0);
-        }
-
-        print();
-
-
-
-
+        //intake.setPower(0);
+        // transfer.setPower(0);
     }
 
     public boolean motorsBusy(int ticks, double startingPosition) {
@@ -577,6 +645,7 @@ public class AutoMain extends LinearOpMode {
 
             double leftPower = Range.clip(power - correction, -max, max);
             double rightPower = Range.clip(power + correction, -max, max);
+            double nearing = 0;
 
             leftFront.setPower(leftPower);
             rightFront.setPower(rightPower);
@@ -589,6 +658,7 @@ public class AutoMain extends LinearOpMode {
         }
 
         //pd correction for strafe motion. Right and left are opposites
+
         else if (movementType.contains("strafe")) {
             double correction = strafePID.getCorrection(error, runtime);
 
@@ -647,26 +717,26 @@ public class AutoMain extends LinearOpMode {
     }
 
     public void powerShot() throws InterruptedException {
-        double pow = -.63;
+        double pow = -.75;
+        //snapBot();
         shooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        shooter.setPower(pow);
+        //shooter.setPower(pow);
         //Target position for shooting
         double targetX = 26.5;
         double targetY = 50.5;
-        double initialDistance = 60;
-        double powerIncrement = 0.04;
-        ElapsedTime wait = new ElapsedTime();
-        pause(200);
-        while (wait.milliseconds() <= 1000) {
-        }
+        double initialDistance = 66;
+        double powerIncrement = 0.06;
+        snapBot();
         yeetLessRing(pow);
-        pause(50);
+
+        pause(500);
+        //strafeByWheelEncoders(0, 8, .4, "strafe right");
         turn(Math.toDegrees(Math.atan2(7.5, initialDistance)));
-        yeetLessRing(pow-powerIncrement);
-        pause(50);
+        yeetLessRing(pow-.1);//-powerIncrement);
+        pause(500);
+        //strafeByWheelEncoders(0, 8, .4, "strafe right");
         turn(Math.toDegrees(Math.atan2(15,initialDistance))-Math.toDegrees(Math.atan2(7.5,initialDistance)));
-        yeetLessRing(pow-(2*powerIncrement));
-        shooter.setPower(0);
+        yeetLessRing(pow-.08);
     }
 
     //The robot pauses for a certain amount of milliseconds
@@ -676,38 +746,45 @@ public class AutoMain extends LinearOpMode {
     }
 
     //The robot intakes rings while driving backwards
-    public void intake(double pow) throws InterruptedException {
+    public void intake(double pow,boolean zoneC) throws InterruptedException {
         intake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         transfer.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        for (DcMotorEx motor : motors) {
-            motor.setTargetPosition((int) (TPI * -6));
-            motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-            motor.setPower(pow);
-            motor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-            intake.setPower(-1);
-            transfer.setPower(1);
+        if(zoneC){
+            intake.setPower(-7);
+            transfer.setPower(.6);
+            moveByWheelEncoders(0,15,-.075,"straight");
+
+        }
+        else{
+            for (DcMotorEx motor : motors) {
+                motor.setTargetPosition((int) (TPI * 10));
+                motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                motor.setPower(pow);
+                motor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                intake.setPower(-1);
+                transfer.setPower(1);
+            }
+
         }
         ElapsedTime succ = new ElapsedTime();
-
-        while (succ.milliseconds() < 5000)
+        while (succ.milliseconds() < (zoneC?2000:2000))
             heartbeat();
         intake.setPower(0);
         transfer.setPower(0);
-
     }
 
     //The robot shoots rings (3 rings) from the ring stack
     public void yeetRing(double pow) throws InterruptedException {
         shooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        shooter.setPower(pow - .05);
+        shooter.setPower(pow - .12);
         ElapsedTime shooterTime = new ElapsedTime();
         int flick = 2000;
-        while (shooterTime.milliseconds() <= 8000) {
+        while (shooterTime.milliseconds() <= 5000) {
             flick = (int) shooterTime.milliseconds() + flick;
             if (shooterTime.milliseconds() >= 2000) {
                 while (shooterTime.milliseconds() <= flick)
                     flicker.setPosition(0);
-                shooter.setPower(pow);
+                shooter.setPower(pow-.09);
             }
             flick = (int) shooterTime.milliseconds() + 500;
             while (shooterTime.milliseconds() <= flick)
@@ -727,9 +804,10 @@ public class AutoMain extends LinearOpMode {
         ElapsedTime shooterTime = new ElapsedTime();
         while (shooterTime.milliseconds() <= 500) {
             if (shooterTime.milliseconds() <= 250) flicker.setPosition(0);
-            else flicker.setPosition(.7);
-        }
-        while (shooterTime.milliseconds() <= 1000) {
+            else {
+                flicker.setPosition(.7);
+                shooter.setPower(0);
+            }
         }
     }
 
@@ -755,14 +833,16 @@ public class AutoMain extends LinearOpMode {
     //Can be used to pick the wobbler or put down the wobbler
     public void armTravel() throws InterruptedException {
         ElapsedTime wobbler = new ElapsedTime();
-        arm.setTargetPosition(-2268);
         arm.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        arm.setTargetPosition(-2268);
+
         arm.setPower(-1);
         arm.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         while (wobbler.milliseconds() <= 3000) {
             heartbeat();
             if (!arm.isBusy()) {
                 claw.setPosition(0);
+                break;
             }
         }
         arm.setTargetPosition(2268);
@@ -794,7 +874,9 @@ public class AutoMain extends LinearOpMode {
         angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
         turnAmount=-turnAmount;
         double startAngle = angles.firstAngle;
-        double desiredAngle = (startAngle+turnAmount)%180;
+        double desiredAngle = startAngle+turnAmount;
+        if(desiredAngle>=180) desiredAngle=-180+desiredAngle%180;
+        else if(desiredAngle<=-180) desiredAngle=180-(-desiredAngle%180);
         int turnFactor = (int) (turnAmount/Math.abs(turnAmount));// (turnAmount/Math.abs(turnAmount) determines if right or left. if left this value will be -1 and swap power values
         double initialPower;
         double minSpeed;
@@ -891,8 +973,8 @@ public class AutoMain extends LinearOpMode {
         static final int REGION_WIDTH = 10;
         static final int REGION_HEIGHT = 25;
 
-        final int FOUR_RING_THRESHOLD = 150;
-        final int ONE_RING_THRESHOLD = 138;
+        final int FOUR_RING_THRESHOLD = 160;
+        final int ONE_RING_THRESHOLD = 140;
 
         Point region1_pointA = new Point(
                 REGION1_TOPLEFT_ANCHOR_POINT.x,
@@ -967,4 +1049,3 @@ public class AutoMain extends LinearOpMode {
 
 
 }
-

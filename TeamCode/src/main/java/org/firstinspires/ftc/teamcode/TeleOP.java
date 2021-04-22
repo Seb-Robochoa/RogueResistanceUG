@@ -5,6 +5,7 @@ package org.firstinspires.ftc.teamcode;
 //restructured by Seb on 1/5/21
 // this is a test for pull requests.
 import com.qualcomm.hardware.bosch.BNO055IMU;
+import com.qualcomm.hardware.rev.Rev2mDistanceSensor;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -13,10 +14,12 @@ import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 import com.qualcomm.robotcore.hardware.ColorSensor;
+import com.qualcomm.robotcore.hardware.DistanceSensor;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 
 
@@ -43,6 +46,7 @@ public class TeleOP extends OpMode {
     private DcMotorEx leftFront, leftBack, rightFront, rightBack, arm, shooter, intake, transfer;
     private boolean direction, togglePrecision;
     private ColorSensor color_sensor;
+    private Rev2mDistanceSensor Distance;
     private double factor;
     boolean currentB = false;
     boolean driveOne = false;
@@ -67,13 +71,14 @@ public class TeleOP extends OpMode {
     private BNO055IMU imu;
     private ElapsedTime runtime;
     private double servo;
-    double shooterPower = .71;
+    double shooterPower = .77;
     int balls = 2;
     boolean shotMode = false;
     boolean clawReady = false;
     ElapsedTime timer = new ElapsedTime();
     ElapsedTime clawmove = new ElapsedTime();
     ElapsedTime flick = new ElapsedTime();
+    ElapsedTime ringCheck = new ElapsedTime();
     boolean servoMoving = false;
     boolean armmove = false;
     final static double dropWobbleTime = 1000;
@@ -82,6 +87,11 @@ public class TeleOP extends OpMode {
     boolean CheeseIs = false;
     boolean CheeseState = false;
     boolean CheeseUp = true;
+    boolean shootinTime = false;
+    int rings = 0;
+    double ringsWas = 0;
+    double ringsIs = 1;
+    boolean yell = false;
 
 //rando comment
 
@@ -103,6 +113,8 @@ public class TeleOP extends OpMode {
         holder = hardwareMap.servo.get("holder");
         cheese = hardwareMap.servo.get("cheese");
         color_sensor = hardwareMap.colorSensor.get("colorSensor");
+        Distance = (Rev2mDistanceSensor) hardwareMap.get(DistanceSensor.class, "hopper");
+
         //Initialize all the hardware to use Encoders
         leftFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         leftBack.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
@@ -146,6 +158,7 @@ public class TeleOP extends OpMode {
         angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
         initialAngle=angles.firstAngle;
         cheese.setPosition(.46);
+
     }
 
 
@@ -159,6 +172,7 @@ public class TeleOP extends OpMode {
         if(CheeseIs && !CheeseWas){
             CheeseState = true;
         }
+        ringsIs = Distance.getDistance(DistanceUnit.MM);
         //sets the factor multiplied to the power of the motors
         factor = togglePrecision ? .3 : 1; //the power is 1/5th of its normal value while in precision mode
         if(!leftFront.isBusy()&&!leftBack.isBusy()&&!rightFront.isBusy()&&!rightBack.isBusy()) {
@@ -204,7 +218,7 @@ public class TeleOP extends OpMode {
         precisionMode(); //check for precision mode
         singlePlayer(); //check to see if player one takes over
         armTravel(); // move arm
-        powerShot(); // toggles speed mode for flywheel
+        //powerShot(); // toggles speed mode for flywheel
         revShoot(); // controls flywheel
         toggleIntake(); // controls intake, on off backwards
         flickRing(); // toggles flicker
@@ -213,11 +227,12 @@ public class TeleOP extends OpMode {
         snapBot();
         cheeseStick();
         rocketFart();
+        countRings();
         //speak();
 
 
-        telemetry.addData("Analysis", pipeline.getAnalysis());
-        telemetry.update();
+
+        telemetry.addData("Rings:", rings);
         telemetry.addData("Power shot mode:", getShotMode());
         telemetry.addData("One driver: ", getDrive());
         telemetry.addData("RB",gamepad1.right_bumper);
@@ -226,10 +241,55 @@ public class TeleOP extends OpMode {
         telemetry.update();
 
 
+
         CheeseWas = CheeseIs;
+        ringsWas = rings;
+
         //}
     }
 
+
+
+    public void countRings(){
+        if(ringsWas != rings){
+            ringCheck.reset();
+            yell = true;
+        }
+        if(ringCheck.milliseconds() > 400) {
+            if (ringsIs > 80) {
+                rings = 0;
+                if(yell) {
+                    telemetry.speak("none");
+                    yell = false;
+                }
+            } else if (ringsIs > 50) {
+                rings = 1;
+                if(yell) {
+                    telemetry.speak("one");
+                    yell = false;
+                }
+            } else if (ringsIs > 28) {
+                rings = 2;
+                if(yell) {
+                    telemetry.speak("two");
+                    yell = false;
+                }
+            } else if (ringsIs > 15) {
+                rings = 3;
+                if(yell) {
+                    telemetry.speak("three");
+                    yell = false;
+                }
+            } else {
+                if(yell) {
+                    telemetry.speak("fuck");
+                    yell = false;
+                }
+            }
+
+        }
+
+    }
     public void autoaim(){
         snapBot();
         boolean move = true;
@@ -249,28 +309,35 @@ public class TeleOP extends OpMode {
     {
 
 
-        flick.reset();
+
         if(gamepad1.b) {
-            shooter.setPower(-.77);
-            while (flick.milliseconds() <= 1000) {
+            shootinTime = true;
+            flick.reset();
+        }
+        if(shootinTime){
+            shooter.setPower(-.8);
+            if (flick.milliseconds() <= 1200) {
                 if (flick.milliseconds() > 0 && flick.milliseconds() < 170)
                     flicker.setPosition(.35);
                 if (flick.milliseconds() > 200 && flick.milliseconds() < 370) {
-                    shooter.setPower(-.75);
+                    shooter.setPower(-.78);
                     flicker.setPosition(.64);
                 }
                 if (flick.milliseconds() > 400 && flick.milliseconds() < 570)
                     flicker.setPosition(.35);
                 if (flick.milliseconds() > 600 && flick.milliseconds() < 770) {
-                    shooter.setPower(-.70);
+                    shooter.setPower(-.73);
                     flicker.setPosition(.64);
                 }
                 if (flick.milliseconds() > 800 && flick.milliseconds() < 970)
                     flicker.setPosition(.35);
             }
-            flicker.setPosition(.64);
+            if(flick.milliseconds() > 1200) {
+                flicker.setPosition(.64);
+                shooter.setPower(0);
+                shootinTime = false;
+            }
         }
-
     }
 
     public void moveByWheelEncoders(double targetHeading, double inches, double power, String movementType, boolean move)  {
@@ -483,12 +550,13 @@ public class TeleOP extends OpMode {
  flicker.setPosition(0);
  servoMoving = false;
  }
-*/
-        if (gamepad1.a) {
-            flicker.setPosition(.35);
-        } else {
-            flicker.setPosition(.64);
-        } // use this code if the above code refuses to work.
+*/      if(!shootinTime) {
+            if (gamepad1.a) {
+                flicker.setPosition(.35);
+            } else {
+                flicker.setPosition(.64);
+            }
+        }// use this code if the above code refuses to work.
 
      /*   if (gamepad1.a){
            flick.reset();

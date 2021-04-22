@@ -255,6 +255,7 @@ public class TeleOP extends OpMode {
             ringCheck.reset();
             yell = true;
         }
+        //hmm
         if(ringCheck.milliseconds() > 400) {
             if (ringsIs > 80) {
                 rings = 0;

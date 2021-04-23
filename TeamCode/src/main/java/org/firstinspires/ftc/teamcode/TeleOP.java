@@ -41,6 +41,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 
 //test lol Test
 //for jon in jon on jon
+//test 2
 @TeleOp
 public class TeleOP extends OpMode {
     private DcMotorEx leftFront, leftBack, rightFront, rightBack, arm, shooter, intake, transfer;
@@ -218,7 +219,7 @@ public class TeleOP extends OpMode {
         precisionMode(); //check for precision mode
         singlePlayer(); //check to see if player one takes over
         armTravel(); // move arm
-        //powerShot(); // toggles speed mode for flywheel
+        powerShot(); // toggles speed mode for flywheel
         revShoot(); // controls flywheel
         toggleIntake(); // controls intake, on off backwards
         flickRing(); // toggles flicker
@@ -488,19 +489,19 @@ public class TeleOP extends OpMode {
     public void powerShot() { // lowers flywheel speed
         if(driveOne) {
             if (gamepad1.dpad_left && !shotMode) {
-                shooterPower = .65;
+                shooterPower = .71;
                 shotMode = true;
             } else if (gamepad1.dpad_right && shotMode) {
-                shooterPower = .69;
+                shooterPower = .77;
                 shotMode = false;
             }
         }
         if(!driveOne) {
             if (gamepad1.y && !shotMode) {
-                shooterPower = .65;
+                shooterPower = .71;
                 shotMode = true;
             } else if (gamepad1.x && shotMode) {
-                shooterPower = .69;
+                shooterPower = .77;
                 shotMode = false;
             }
         }

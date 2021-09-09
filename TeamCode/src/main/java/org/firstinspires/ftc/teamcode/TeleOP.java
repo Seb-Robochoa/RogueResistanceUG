@@ -73,7 +73,7 @@ public class TeleOP extends OpMode {
     private ElapsedTime runtime;
     private double servo;
     double shooterPower = .77;
-    int balls = 2;
+    int balls = 3;
     boolean shotMode = false;
     boolean clawReady = false;
     ElapsedTime timer = new ElapsedTime();
